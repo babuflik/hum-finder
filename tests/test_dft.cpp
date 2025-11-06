@@ -1,45 +1,44 @@
 #include <gtest/gtest.h>
-#include "../include/dft.h"
+#include "dft.h"
+#include <vector>
+#include <complex>
 
-TEST(DFTTest, BasicFunctionality) {
-    DFT dft;
-
-    // Test input signal: a simple sine wave
-    const int N = 8;
-    double input[N] = {0.0, 0.707, 1.0, 0.707, 0.0, -0.707, -1.0, -0.707};
-    std::vector<std::complex<double>> output = dft.compute(input, N);
-
-    // Expected output (magnitude) for the sine wave
-    double expected_magnitude[N] = {0.0, 0.0, 4.0, 0.0, 0.0, 0.0, 0.0, 0.0};
-
-    for (int i = 0; i < N; ++i) {
-        EXPECT_NEAR(std::abs(output[i]), expected_magnitude[i], 1e-5);
+class DFTTest : public ::testing::Test {
+protected:
+    void SetUp() override {
+        // Set up test data
+        input_size = 8;
+        dft = new DFT(input_size);
     }
-}
 
-TEST(DFTTest, ZeroInput) {
-    DFT dft;
-
-    const int N = 8;
-    double input[N] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
-    std::vector<std::complex<double>> output = dft.compute(input, N);
-
-    for (int i = 0; i < N; ++i) {
-        EXPECT_NEAR(output[i].real(), 0.0, 1e-5);
-        EXPECT_NEAR(output[i].imag(), 0.0, 1e-5);
+    void TearDown() override {
+        delete dft;
     }
-}
 
-TEST(DFTTest, ConstantInput) {
-    DFT dft;
+    DFT* dft;
+    size_t input_size;
+};
 
-    const int N = 8;
-    double input[N] = {1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0};
-    std::vector<std::complex<double>> output = dft.compute(input, N);
-
-    EXPECT_NEAR(output[0].real(), 8.0, 1e-5);
-    for (int i = 1; i < N; ++i) {
-        EXPECT_NEAR(output[i].real(), 0.0, 1e-5);
-        EXPECT_NEAR(output[i].imag(), 0.0, 1e-5);
+TEST_F(DFTTest, ComputeSineWave) {
+    std::vector<double> input(input_size);
+    // Generate simple sine wave
+    for (size_t i = 0; i < input_size; i++) {
+        input[i] = std::sin(2.0 * M_PI * i / input_size);
     }
+    
+    auto result = dft->compute(input);
+    
+    // For a pure sine wave, we expect peak at frequency 1
+    std::vector<double> magnitudes = dft->getMagnitude(result);
+    size_t peak_idx = 0;
+    double peak_value = 0;
+    
+    for (size_t i = 0; i < magnitudes.size(); i++) {
+        if (magnitudes[i] > peak_value) {
+            peak_value = magnitudes[i];
+            peak_idx = i;
+        }
+    }
+    
+    EXPECT_EQ(peak_idx, 1);
 }

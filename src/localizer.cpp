@@ -1,37 +1,54 @@
 #include "localizer.h"
-#include "dft.h"
-#include <vector>
 #include <cmath>
-#include <iostream>
+#include <stdexcept>
 
-class Localizer {
-public:
-    Localizer(const std::vector<std::pair<double, double>>& micPositions)
-        : microphonePositions(micPositions) {}
+Localizer::Localizer(const std::array<Microphone, 3>& microphones) 
+    : microphones_(microphones) {
+}
 
-    void processAudioData(const std::vector<double>& audioData) {
-        DFT dft;
-        std::vector<std::complex<double>> frequencyData = dft.performDFT(audioData);
-        identifyHummingFrequency(frequencyData);
+std::array<double, 2> Localizer::locateSource(const std::vector<double>& magnitudes) {
+    if (magnitudes.size() != 3) {
+        throw std::invalid_argument("Need exactly 3 magnitude readings");
     }
 
-    void triangulateSource() {
-        if (hummingFrequency > 0) {
-            // Implement triangulation logic based on microphone positions and phase differences
-            std::cout << "Triangulating source of humming at frequency: " << hummingFrequency << " Hz" << std::endl;
-            // Example triangulation logic (to be implemented)
-        } else {
-            std::cout << "No humming frequency detected." << std::endl;
-        }
+    // Calculate intersections between each pair of circles
+    auto pos1 = calculateIntersection(
+        microphones_[0].getPosition(),
+        microphones_[1].getPosition(),
+        magnitudes[0],
+        magnitudes[1]
+    );
+
+    auto pos2 = calculateIntersection(
+        microphones_[1].getPosition(),
+        microphones_[2].getPosition(),
+        magnitudes[1],
+        magnitudes[2]
+    );
+
+    // Return average position as estimated source location
+    return std::array<double, 2>{(pos1[0] + pos2[0]) / 2.0, (pos1[1] + pos2[1]) / 2.0};
+}
+
+std::array<double, 2> Localizer::calculateIntersection(
+    const std::array<double, 2>& pos1,
+    const std::array<double, 2>& pos2,
+    double r1,
+    double r2) {
+    
+    double dx = pos2[0] - pos1[0];
+    double dy = pos2[1] - pos1[1];
+    double d = std::sqrt(dx * dx + dy * dy);
+
+    if (d > r1 + r2 || d < std::abs(r1 - r2)) {
+        throw std::runtime_error("No intersection exists");
     }
 
-private:
-    std::vector<std::pair<double, double>> microphonePositions;
-    double hummingFrequency = 0.0;
+    double a = (r1 * r1 - r2 * r2 + d * d) / (2 * d);
+    double h = std::sqrt(r1 * r1 - a * a);
 
-    void identifyHummingFrequency(const std::vector<std::complex<double>>& frequencyData) {
-        // Analyze frequencyData to find the dominant low-frequency component
-        // This is a placeholder for actual frequency analysis logic
-        hummingFrequency = 50.0; // Example: assume we detected a humming frequency of 50 Hz
-    }
-};
+    double x = pos1[0] + (dx * a) / d;
+    double y = pos1[1] + (dy * a) / d;
+
+    return std::array<double, 2>{x, y};
+}

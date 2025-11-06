@@ -1,0 +1,1 @@
+/usr/bin/g++ -g CMakeFiles/run_tests.dir/tests/test_dft.cpp.o CMakeFiles/run_tests.dir/tests/test_localizer.cpp.o -o run_tests  libhumming_core.a -lpthread /usr/lib/x86_64-linux-gnu/libfftw3.so /usr/lib/x86_64-linux-gnu/libgtest_main.a /usr/lib/x86_64-linux-gnu/libgtest.a 

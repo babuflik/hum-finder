@@ -5,17 +5,15 @@
 #include "localizer.h"
 
 int main() {
-    const int numMicrophones = 3;
-    Microphone microphones[numMicrophones];
     
-    // Initialize microphones
-    for (int i = 0; i < numMicrophones; ++i) {
-        if (!microphones[i].initialize(i)) {
-            std::cerr << "Failed to initialize microphone " << i << std::endl;
-            return -1;
-        }
-    }
+    // Initialize microphones at specific positions
+    std::array<Microphone, 3> microphones = {
+        Microphone(0.0, 0.0),    // First microphone at origin
+        Microphone(1.0, 0.0),    // Second microphone 1m to the right
+        Microphone(0.5, 0.866)   // Third microphone forming equilateral triangle
+    };
 
+    /*
     // Start capturing audio
     for (int i = 0; i < numMicrophones; ++i) {
         microphones[i].startCapture();
@@ -31,22 +29,28 @@ int main() {
     for (int i = 0; i < numMicrophones; ++i) {
         microphones[i].stopCapture();
     }
-
+*/
+    /*
     // Perform Discrete Fourier Transform
     DFT dft;
     std::vector<std::vector<std::complex<double>>> frequencyData(numMicrophones);
     for (int i = 0; i < numMicrophones; ++i) {
         frequencyData[i] = dft.performDFT(audioData[i]);
     }
+    */
 
-    // Localize the sound source
-    Localizer localizer;
-    auto sourceLocation = localizer.localize(frequencyData);
+    // Create localizer with microphone array
+    Localizer localizer(microphones);
+
+    // Sample data processing (replace with actual data collection)
+    std::vector<double> frequencyData = {0.5, 0.7, 0.3}; // Example magnitudes
+
+    auto sourceLocation = localizer.locateSource(frequencyData);
 
     // Output the result
-    std::cout << "Estimated source location: (" 
-              << sourceLocation.first << ", " 
-              << sourceLocation.second << ")" << std::endl;
+    std::cout << "Source located at: (" 
+              << sourceLocation[0] << ", " 
+              << sourceLocation[1] << ")" << std::endl;
 
     return 0;
 }

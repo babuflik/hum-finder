@@ -1,0 +1,38 @@
+[
+{
+  "directory": "/home/will/projects/humming-localization-cpp/build",
+  "command": "/usr/bin/g++  -I/home/will/projects/humming-localization-cpp/include -g -std=gnu++14 -o CMakeFiles/humming_core.dir/src/microphone.cpp.o -c /home/will/projects/humming-localization-cpp/src/microphone.cpp",
+  "file": "/home/will/projects/humming-localization-cpp/src/microphone.cpp",
+  "output": "CMakeFiles/humming_core.dir/src/microphone.cpp.o"
+},
+{
+  "directory": "/home/will/projects/humming-localization-cpp/build",
+  "command": "/usr/bin/g++  -I/home/will/projects/humming-localization-cpp/include -g -std=gnu++14 -o CMakeFiles/humming_core.dir/src/dft.cpp.o -c /home/will/projects/humming-localization-cpp/src/dft.cpp",
+  "file": "/home/will/projects/humming-localization-cpp/src/dft.cpp",
+  "output": "CMakeFiles/humming_core.dir/src/dft.cpp.o"
+},
+{
+  "directory": "/home/will/projects/humming-localization-cpp/build",
+  "command": "/usr/bin/g++  -I/home/will/projects/humming-localization-cpp/include -g -std=gnu++14 -o CMakeFiles/humming_core.dir/src/localizer.cpp.o -c /home/will/projects/humming-localization-cpp/src/localizer.cpp",
+  "file": "/home/will/projects/humming-localization-cpp/src/localizer.cpp",
+  "output": "CMakeFiles/humming_core.dir/src/localizer.cpp.o"
+},
+{
+  "directory": "/home/will/projects/humming-localization-cpp/build",
+  "command": "/usr/bin/g++  -I/home/will/projects/humming-localization-cpp/include -g -std=gnu++14 -o CMakeFiles/humming_localization.dir/src/main.cpp.o -c /home/will/projects/humming-localization-cpp/src/main.cpp",
+  "file": "/home/will/projects/humming-localization-cpp/src/main.cpp",
+  "output": "CMakeFiles/humming_localization.dir/src/main.cpp.o"
+},
+{
+  "directory": "/home/will/projects/humming-localization-cpp/build",
+  "command": "/usr/bin/g++  -I/home/will/projects/humming-localization-cpp/include -g -std=gnu++14 -DGTEST_HAS_PTHREAD=1 -o CMakeFiles/run_tests.dir/tests/test_dft.cpp.o -c /home/will/projects/humming-localization-cpp/tests/test_dft.cpp",
+  "file": "/home/will/projects/humming-localization-cpp/tests/test_dft.cpp",
+  "output": "CMakeFiles/run_tests.dir/tests/test_dft.cpp.o"
+},
+{
+  "directory": "/home/will/projects/humming-localization-cpp/build",
+  "command": "/usr/bin/g++  -I/home/will/projects/humming-localization-cpp/include -g -std=gnu++14 -DGTEST_HAS_PTHREAD=1 -o CMakeFiles/run_tests.dir/tests/test_localizer.cpp.o -c /home/will/projects/humming-localization-cpp/tests/test_localizer.cpp",
+  "file": "/home/will/projects/humming-localization-cpp/tests/test_localizer.cpp",
+  "output": "CMakeFiles/run_tests.dir/tests/test_localizer.cpp.o"
+}
+]

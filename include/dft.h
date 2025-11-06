@@ -1,18 +1,22 @@
-#ifndef DFT_H
-#define DFT_H
-
+#pragma once
 #include <vector>
 #include <complex>
+#include <fftw3.h>
 
 class DFT {
 public:
-    DFT();
-    std::vector<std::complex<double>> compute(const std::vector<double>& inputSignal);
-    std::vector<double> getMagnitude(const std::vector<std::complex<double>>& dftResult);
-    std::vector<double> getFrequencyBins(int sampleRate, int numSamples);
+    explicit DFT(int size);
+    ~DFT();
+
+    // Compute DFT for given input
+    std::vector<std::complex<double>> compute(const std::vector<double>& input);
+    
+    // Get magnitude spectrum from DFT result
+    static std::vector<double> getMagnitude(const std::vector<std::complex<double>>& dftResult);
 
 private:
-    void normalize(std::vector<std::complex<double>>& dftResult);
+    int size_;
+    fftw_plan plan_;
+    double* in_;
+    fftw_complex* out_;
 };
-
-#endif // DFT_H
