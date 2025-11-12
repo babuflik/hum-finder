@@ -1,2 +1,0 @@
-/usr/bin/ar qc libhumming_core.a CMakeFiles/humming_core.dir/src/microphone.cpp.o CMakeFiles/humming_core.dir/src/dft.cpp.o CMakeFiles/humming_core.dir/src/localizer.cpp.o
-/usr/bin/ranlib libhumming_core.a

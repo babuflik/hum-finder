@@ -1,3 +1,9 @@
+#vscode files
+.vscode/
+
+#build files
+build/
+
 # Prerequisites
 *.d
 
@@ -39,3 +45,4 @@
 
 # debug information files
 *.dwo
+
