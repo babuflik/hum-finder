@@ -1,0 +1,26 @@
+{
+    "configurations": [
+        {
+            "name": "Hum-finder",
+            "includePath": [
+                "${workspaceFolder}",
+                "${workspaceFolder}/include",
+                "${workspaceFolder}/src"
+            ],
+            "browse": {
+                "limitSymbolsToIncludedHeaders": true,
+                "path": [
+                    "${workspaceFolder}",
+                    "${workspaceFolder}/include",
+                    "${workspaceFolder}/src"
+                ]
+            },
+            "defines": [],
+            "cStandard": "gnu17",
+            "cppStandard": "gnu++17",
+            "compilerPath": "/usr/bin/g++",
+            "compilerArgs": []
+        }
+    ],
+    "version": 4
+}

@@ -1,0 +1,13 @@
+{
+    "clangd.arguments": [
+        "--compile-commands-dir=build",
+        "--background-index",
+        "--clang-tidy",
+        "--completion-style=detailed",
+        "--header-insertion=iwyu"
+    ],
+
+    "C_Cpp.intelliSenseEngine": "disabled", 
+    "C_Cpp.formatting": "disabled",
+    "idf.pythonInstallPath": "/usr/bin/python"
+}
