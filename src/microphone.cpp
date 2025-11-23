@@ -1,4 +1,4 @@
-#include "Microphone.h"
+#include "microphone.h"
 #include <algorithm> // För std::fill
 
 // Konstruktor
@@ -15,6 +15,10 @@ Microphone::Microphone(double x, double y, double z)
 // Position getter
 std::array<double, 3> Microphone::getPosition() const {
     return position_;
+}
+
+void Microphone::setPosition(const std::array<double,3>& pos) {
+    position_ = pos;
 }
 
 // Lägger till ett nytt ljudprov och hanterar ringbufferten

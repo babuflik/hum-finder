@@ -1,31 +1,39 @@
-#include "localizer.h"
+#include "sensormod.h"
+#include "estimators.h" // ls, wls, ml, crlb
 #include <gtest/gtest.h>
-#include <array>
-#include <vector>
+#include <Eigen/Dense>
+#include <iostream>
 
-class LocalizerTest : public ::testing::Test {
-protected:
-    LocalizerTest() : 
-        microphones{
-            Microphone(0.0, 0.0),      // First microphone at origin
-            Microphone(1.0, 0.0),      // Second microphone 1m to the right
-            Microphone(0.5, 0.866)     // Third microphone to form triangle
-        },
-        localizer(microphones) {}
+// Hjälpfunktion: skapa syntetisk signal för SensorMod
+Sig generateSyntheticSignal(SensorMod& sensor,
+                            const Eigen::VectorXd& t,
+                            const Eigen::VectorXd& x0,
+                            int MC = 0)
+{
+    Eigen::MatrixXd x = x0.replicate(1, t.size());
+    return sensor.simulate(t, &x, nullptr, MC);
+}
 
-    void SetUp() override {}
+// --- TEST ---
+TEST(SensorModTest, SyntheticSourceEstimators) {
+    Eigen::Vector4i nn{3, 0, 3, 0}; // [nx, nu, ny, nth]
+    auto hFunc = [](double t, const Eigen::VectorXd& x,
+                    const Eigen::VectorXd& u,
+                    const Eigen::VectorXd& th) {
+        return x; // enkel identitetsmodell
+    };
 
-    std::array<Microphone, 3> microphones;
-    Localizer localizer;
-};
+    SensorMod sensor(hFunc, nn);
 
-TEST_F(LocalizerTest, TestTriangulateSingleSource) {
-    // Simulate magnitudes that would come from a source at (0.5, 0.5)
-    std::vector<double> magnitudes = {0.7071, 0.7071, 0.7071}; // Example values
-    
-    auto result = localizer.locateSource(magnitudes);
-    
-    // Check if the result is close to expected position
-    EXPECT_NEAR(result[0], 0.5, 0.1); // x coordinate
-    EXPECT_NEAR(result[1], 0.5, 0.1); // y coordinate
+    Eigen::VectorXd t(5);
+    t << 0,1,2,3,4;
+
+    // Skapa syntetisk signal
+    Sig y = generateSyntheticSignal(sensor, t, sensor.x0);
+
+    // --- CRLB ---
+    Sig crlb_sig = crlb(sensor, &y);
+    std::cout << "CRLB (Px):\n" << crlb_sig.Px << "\n";
+
+    // Här kan du fortsätta med LS/WLS/ML estimatorer
 }

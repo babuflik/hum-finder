@@ -17,6 +17,8 @@ public:
 
     // Position getter
     std::array<double, 3> getPosition() const;
+
+    void setPosition(const std::array<double,3>& pos);
     
     // Lägger till ett nytt ljudprov till bufferten (lägger till i slutet och skriver över äldst om full)
     void addSample(double sample);

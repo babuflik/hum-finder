@@ -1,44 +1,69 @@
-cmake_minimum_required(VERSION 3.10)
-project(humming-localization-cpp)
+cmake_minimum_required(VERSION 3.14)
+project(humming-localization-cpp LANGUAGES CXX)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Add cmake modules path
+# -------------------------------------------------------------------
+# CMake modules path (for FindFFTW3.cmake)
+# -------------------------------------------------------------------
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules")
 
-# Find required packages
+# -------------------------------------------------------------------
+# Dependencies
+# -------------------------------------------------------------------
+find_package(Eigen3 REQUIRED)
+find_package(FFTW3 REQUIRED)        # uses your custom module
 find_package(GTest REQUIRED)
-find_package(FFTW3 REQUIRED)
 
-# Include directories
-include_directories(${GTEST_INCLUDE_DIRS})
-include_directories(${FFTW3_INCLUDE_DIRS})
-include_directories(include)
-
-# Core library sources
+# -------------------------------------------------------------------
+# Library: humming_core
+# -------------------------------------------------------------------
 add_library(humming_core STATIC
     src/microphone.cpp
-    src/dft.cpp
+    src/utils.cpp
+    src/tdoa_calculator.cpp
     src/localizer.cpp
+    src/gcc_phat.cpp
+    src/estimators.cpp
 )
 
-# Link core library with FFTW
-target_link_libraries(humming_core PUBLIC ${FFTW3_LIBRARIES})
+target_include_directories(humming_core PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
 
+target_link_libraries(humming_core PUBLIC
+    Eigen3::Eigen
+    FFTW3::fftw3
+)
+
+# -------------------------------------------------------------------
 # Main executable
-add_executable(humming_localization src/main.cpp)
-target_link_libraries(humming_localization PRIVATE humming_core)
+# -------------------------------------------------------------------
+add_executable(humming_localization
+    src/main.cpp
+)
 
-# Testing
+target_link_libraries(humming_localization PRIVATE
+    humming_core
+)
+
+# -------------------------------------------------------------------
+# Tests
+# -------------------------------------------------------------------
+# Enable testing
 enable_testing()
 
-# Create test executable
-add_executable(run_tests 
-    tests/test_dft.cpp
+# Hitta Google Test
+find_package(GTest REQUIRED)
+
+# Skapa test-executable
+add_executable(run_tests
     tests/test_localizer.cpp
 )
 
-# Link test executable
+# Länka bibliotek
 target_link_libraries(run_tests
     PRIVATE
         humming_core
@@ -46,3 +71,6 @@ target_link_libraries(run_tests
         GTest::Main
         pthread
 )
+
+# Lägg till CTest
+add_test(NAME LocalizerTest COMMAND run_tests)
