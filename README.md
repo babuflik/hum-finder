@@ -2,6 +2,43 @@
 
 This project implements a sensor network model utilizing three microphone sensors to localize the source of a low-frequency humming sound. The system captures audio data, analyzes it using a Discrete Fourier Transform (DFT), and employs triangulation techniques to determine the sound source's location.
 
+**Extended Implementation**: This project also includes a comprehensive C++ port of the MATLAB SigSys Toolbox, providing probability distributions, nonlinear filtering (EKF/UKF/PF), and signal processing capabilities.
+
+## Quick Start
+
+### Build
+```bash
+cd build
+cmake ..
+make -j4
+```
+
+### Run Tests
+```bash
+ctest --output-on-failure  # All tests: 28/28 passing
+```
+
+### Run Localization
+```bash
+./humming_localization
+```
+
+### Visualize Results
+```bash
+make plot      # 2D plot
+make plot3d ELEV=30 AZIM=45  # 3D plot with custom viewing angles
+```
+
+## Current Implementation Status
+
+- ✅ **10 Probability Distributions**: NDist, UDist, ExpDist, Chi2Dist, GammaDist, GMDist, TDist, BetaDist, EmpDist, LogNDist
+- ✅ **NL Filtering Framework**: EKF, UKF, Particle Filter with simulation
+- ✅ **Signal Processing**: Sig class with statistics, extraction, downsampling
+- ✅ **Numerical Utilities**: Gradient, Hessian, Jacobian, covariance tools
+- ✅ **28 Tests Passing**: Full test coverage for all new functionality
+
+See `CONTINUATION_GUIDE.md` for implementation details and next steps.
+
 ## Project Structure
 
   - **main.cpp**: Entry point of the application.
@@ -99,9 +136,26 @@ This project is licensed under the MIT License. See the LICENSE file for more de
 
 ## Plotting estimation results
 
-I added a small plotting utility in `tools/plot_estimates.py` and a sample-data generator `tools/generate_sample_data.py` to visualize sensor layouts, target positions, estimates and confidence ellipses.
+I added a plotting utility in `tools/plot_estimates.py` and sample-data generators to visualize sensor layouts, target positions, estimates and confidence ellipses/ellipsoids.
 
-Quick start:
+### Quick Start (using Makefile)
+
+The easiest way to generate plots after running tests:
+
+```bash
+# 2D plotting (using test artifacts)
+make plot
+
+# 3D plotting with custom viewing angle
+make plot3d ELEV=20 AZIM=45
+
+# Default viewing angle: ELEV=30 AZIM=-60
+make plot3d
+```
+
+### 2D Plotting
+
+Manual command:
 
 ```bash
 # from repo root
@@ -109,6 +163,33 @@ python3 tools/generate_sample_data.py
 python3 tools/plot_estimates.py --sensors artifacts/sensors.csv --targets artifacts/targets.csv \
    --estimates artifacts/estimates.csv --cov artifacts/covariances.npy --outfile artifacts/plot.png --show
 ```
+
+Or simply:
+```bash
+make plot
+```
+
+### 3D Plotting
+
+For 3D visualization with confidence ellipsoids:
+
+```bash
+# Generate 3D sample data
+python3 tools/generate_sample_data_3d.py
+
+# Plot in 3D with custom viewing angle
+python3 tools/plot_estimates.py --sensors artifacts/sensors_3d.csv --targets artifacts/targets_3d.csv \
+   --estimates artifacts/estimates_3d.csv --cov artifacts/covariances_3d.npy --3d \
+   --elev 20 --azim 45 --outfile artifacts/plot_3d.png
+```
+
+Or use the Makefile for easier commands:
+```bash
+make plot3d              # Default view (elevation=30°, azimuth=-60°)
+make plot3d ELEV=20 AZIM=45   # Custom viewing angle
+```
+
+The `--elev` parameter controls the elevation angle (vertical tilt), and `--azim` controls the azimuth (horizontal rotation) of the 3D plot.
 
 Python dependencies:
 

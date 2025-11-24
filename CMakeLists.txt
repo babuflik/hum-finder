@@ -26,7 +26,8 @@ add_library(humming_core STATIC
     src/tdoa_calculator.cpp
     src/localizer.cpp
     src/gcc_phat.cpp
-    src/estimators.cpp
+        src/estimators.cpp
+        src/nl.cpp
 )
 
 target_include_directories(humming_core PUBLIC
@@ -75,3 +76,36 @@ target_link_libraries(run_tests
 
 # Lägg till CTest
 add_test(NAME LocalizerTest COMMAND run_tests)
+
+# Toolbox test executable
+add_executable(test_toolbox tests/test_toolbox.cpp)
+target_link_libraries(test_toolbox
+    PRIVATE
+        humming_core
+        GTest::GTest
+        GTest::Main
+        pthread
+)
+add_test(NAME ToolboxTest COMMAND test_toolbox)
+
+# NL class test executable
+add_executable(test_nl tests/test_nl.cpp)
+target_link_libraries(test_nl
+    PRIVATE
+        humming_core
+        GTest::GTest
+        GTest::Main
+        pthread
+)
+add_test(NAME NLTest COMMAND test_nl)
+
+# Sig class test executable
+add_executable(test_sig tests/test_sig.cpp)
+target_link_libraries(test_sig
+    PRIVATE
+        humming_core
+        GTest::GTest
+        GTest::Main
+        pthread
+)
+add_test(NAME SigTest COMMAND test_sig)

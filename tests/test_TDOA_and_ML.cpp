@@ -202,7 +202,11 @@ TEST(LocalizerTest, MicrophoneLocalizationEndToEnd)
 
     // 3. Populate CRLBData
     CRLBData crlb_data;
-    crlb_data.Px = cr_result.Px.topLeftCorner(2, 2); 
+    if (!cr_result.Px.empty()) {
+        crlb_data.Px = cr_result.Px[0].topLeftCorner(2, 2);
+    } else {
+        crlb_data.Px = Eigen::Matrix2d::Identity();
+    }
     // NOTE: Assumes CRLB function returns Px with correct size,
     // but we take the top-left 2x2 block to be safe, as in the original code.
 

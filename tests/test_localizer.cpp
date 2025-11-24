@@ -33,7 +33,9 @@ TEST(SensorModTest, SyntheticSourceEstimators) {
 
     // --- CRLB ---
     Sig crlb_sig = crlb(sensor, &y);
-    std::cout << "CRLB (Px):\n" << crlb_sig.Px << "\n";
+    if (!crlb_sig.Px.empty()) {
+        std::cout << "CRLB (Px):\n" << crlb_sig.Px[0] << "\n";
+    }
 
     // Here you can continue with LS/WLS/ML estimators
 }

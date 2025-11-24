@@ -279,11 +279,11 @@ Sig crlb(const SensorMod& s, const Sig* y)
 
     // Prepare output Sig object
     Sig out;
-    // ASSUMPTION: Sig has members .x (nx x ?), .Px (nx x nx). Adjust if names differ.
+    // ASSUMPTION: Sig has members .x (nx x ?), .Px (vector of nx x nx). Adjust if names differ.
     // set out.x to column vector x0
     out.x = Eigen::MatrixXd::Zero(nx, 1);
     out.x.col(0) = x0;
-    out.Px = Px;
+    out.Px.push_back(Px);  // Store single covariance matrix
 
     return out;
 }
@@ -321,7 +321,7 @@ Eigen::VectorXd crlb2_grid(const SensorMod& s,
 
             // call crlb
             Sig cr = crlb(s, &ylocal);
-            Eigen::MatrixXd Px = cr.Px;
+            Eigen::MatrixXd Px = cr.Px.empty() ? Eigen::MatrixXd::Zero(s.nn[0], s.nn[0]) : cr.Px[0];
 
             double scalar = 0.0;
             if (type == "trace") {

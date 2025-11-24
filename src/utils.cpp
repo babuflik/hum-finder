@@ -131,6 +131,7 @@ void save_crlb_ellipse(
     if (fout.is_open()) {
         fout << "x,y\n";
 
+        // CRLBData.Px is still a single matrix, not a vector
         Eigen::Matrix2d P = crlb_data.Px;
         Eigen::SelfAdjointEigenSolver<Eigen::Matrix2d> es(P);
 
