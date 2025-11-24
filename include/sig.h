@@ -3,16 +3,16 @@
 #include <vector>
 
 struct Sig {
-    Eigen::MatrixXd y;      // mätningar
-    Eigen::VectorXd t;      // tid
-    Eigen::MatrixXd u;      // insignal
-    Eigen::MatrixXd x;      // tillstånd
+    Eigen::MatrixXd y;      // measurements
+    Eigen::VectorXd t;      // time
+    Eigen::MatrixXd u;      // input signal
+    Eigen::MatrixXd x;      // state
 
-    // MC-simuleringar
+    // Monte Carlo simulations
     std::vector<Eigen::MatrixXd> yMC;
     std::vector<Eigen::MatrixXd> xMC;
 
-    // CRLB
+    // Cramer-Rao Lower Bound covariance matrix
     Eigen::MatrixXd Px;
 
     Sig() {}

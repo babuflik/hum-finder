@@ -4,7 +4,7 @@
 #include <Eigen/Dense>
 #include <iostream>
 
-// Hjälpfunktion: skapa syntetisk signal för SensorMod
+// Helper: create synthetic signal for SensorMod
 Sig generateSyntheticSignal(SensorMod& sensor,
                             const Eigen::VectorXd& t,
                             const Eigen::VectorXd& x0,
@@ -35,5 +35,6 @@ TEST(SensorModTest, SyntheticSourceEstimators) {
     Sig crlb_sig = crlb(sensor, &y);
     std::cout << "CRLB (Px):\n" << crlb_sig.Px << "\n";
 
-    // Här kan du fortsätta med LS/WLS/ML estimatorer
+    // Here you can continue with LS/WLS/ML estimators
 }
+

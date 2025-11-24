@@ -1,14 +1,14 @@
 #include "microphone.h"
-#include <algorithm> // För std::fill
+#include <algorithm> // For std::fill
 
 // Konstruktor
 Microphone::Microphone(double x, double y, double z) 
     : position_{x, y, z} {
     
-    // Allokera minne för hela bufferten en gång vid start
+    // Allocate memory for the entire buffer once at startup
     samples_.resize(BUFFER_SIZE);
     
-    // Nollställ bufferten
+    // Zero out the buffer
     std::fill(samples_.begin(), samples_.end(), 0.0);
 }
 
@@ -21,15 +21,15 @@ void Microphone::setPosition(const std::array<double,3>& pos) {
     position_ = pos;
 }
 
-// Lägger till ett nytt ljudprov och hanterar ringbufferten
+// Add a new audio sample and manage the ring buffer
 void Microphone::addSample(double sample) {
-    // Lägg in provet vid det aktuella skrivindexet
+    // Insert sample at the current write index
     samples_[write_index_] = sample;
     
-    // Öka skrivindexet och rulla över till 0 om vi når slutet
+    // Increment write index and wrap to 0 if we reach the end
     write_index_ = (write_index_ + 1) % BUFFER_SIZE;
     
-    // Räkna hur många prover som har fyllts. Ökar tills den når maxstorleken.
+    // Count how many samples have been filled. Increases until it reaches max size.
     if (samples_filled_count_ < BUFFER_SIZE) {
         samples_filled_count_++;
     }
@@ -38,21 +38,21 @@ void Microphone::addSample(double sample) {
 // Returnerar hela den aktuella bufferten
 std::vector<double> Microphone::getSamples() const {
     
-    // Om bufferten inte är full returnerar vi bara de insamlade proverna
+    // If buffer is not full, return only the collected samples
     if (samples_filled_count_ < BUFFER_SIZE) {
         return samples_;
     }
 
-    // --- Ringbuffert läslogik ---
+    // --- Ring buffer read logic ---
     
-    // Om bufferten är full: De äldsta proverna ligger vid write_index_.
-    // Vi måste läsa ut bufferten i RÄTT TIDSORDNING: 
-    // [Äldsta prover] följt av [Nyaste prover].
+    // If buffer is full: The oldest samples are at write_index_.
+    // We must read the buffer in CORRECT TIME ORDER: 
+    // [Oldest samples] followed by [Newest samples].
     
     std::vector<double> ordered_samples;
     ordered_samples.reserve(BUFFER_SIZE);
     
-    // 1. Kopiera de äldsta proverna (från write_index_ till slutet)
+    // 1. Copy the oldest samples (from write_index_ to end)
     if (write_index_ < BUFFER_SIZE) {
         ordered_samples.insert(
             ordered_samples.end(),
@@ -61,7 +61,7 @@ std::vector<double> Microphone::getSamples() const {
         );
     }
     
-    // 2. Kopiera de nyaste proverna (från början till write_index_)
+    // 2. Copy the newest samples (from beginning to write_index_)
     if (write_index_ > 0) {
         ordered_samples.insert(
             ordered_samples.end(),
@@ -70,7 +70,7 @@ std::vector<double> Microphone::getSamples() const {
         );
     }
 
-    // Observera: Detta returnerar en Kopia. För realtidsoptimering kan man överväga 
-    // att returnera en referens eller en specialiserad iterator.
+    // Note: This returns a Copy. For real-time optimization, consider 
+    // returning a reference or a specialized iterator.
     return ordered_samples;
 }

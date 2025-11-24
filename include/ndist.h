@@ -7,14 +7,14 @@
 #include <string>
 #include <random>
 
-// Hårdkodad check för kovariansmatris.
-// Kräver ytterligare implementering för fullständig MATLAB iscov-logik.
+// Simple check for covariance matrix validity.
+// Requires additional implementation for full MATLAB iscov parity.
 inline bool is_valid_covariance(const Eigen::MatrixXd& P) {
-    if (P.rows() != P.cols()) return false; // Måste vara kvadratisk
-    if (!P.isApprox(P.transpose())) return false; // Måste vara symmetrisk
+    if (P.rows() != P.cols()) return false; // Must be square
+    if (!P.isApprox(P.transpose())) return false; // Must be symmetric
     
-    // För positivt semidefiniteness (PSD), används Cholesky-faktorisering (LLT)
-    // En striktare check än vad som visas här skulle krävas för fullständig MATLAB-paritet.
+    // For positive semidefiniteness (PSD), use Cholesky factorization (LLT).
+    // A stricter check would be required for full MATLAB iscov parity.
     Eigen::LLT<Eigen::MatrixXd> llt(P);
     return llt.info() == Eigen::Success;
 }
@@ -26,9 +26,9 @@ public:
     using Matrix = Eigen::MatrixXd;
     
     // ------------------------------------------------------------------
-    // MATLAB properties
+    // MATLAB-like properties
     // ------------------------------------------------------------------
-    // Mu och P lagras i NDist, inte SensorMod
+    // mu and P are stored in NDist (not in SensorMod)
     Vector mu;
     Matrix P;
 
@@ -37,7 +37,7 @@ public:
     std::vector<std::string> xlabel;
 
     // ------------------------------------------------------------------
-    // Konstruktor (MATLAB ndist)
+    // Constructors (MATLAB ndist compatibility)
     // ------------------------------------------------------------------
 
     // 1. Tom konstruktor (ndist)
@@ -47,14 +47,14 @@ public:
         state = generate_random_state();
     }
     
-    // 2. Fullständig konstruktor (ndist(mu, P))
+    // 2. Full constructor (ndist(mu, P))
     NDist(const Vector& mu_, const Matrix& P_) : SensorMod(nullptr, get_nn(mu_)) {
         initialize(mu_, P_);
         state = generate_random_state();
     }
 
-    // 3. Kopieringskonstruktor (ndist(X) eller ndist(gmdist))
-    // Vi använder en generisk kopieringsfunktion för att hantera ndist/gmdist-fall
+    // 3. Copy constructor (ndist(X) or ndist(gmdist))
+    // We use a generic copy approach to handle ndist/gmdist cases
     NDist(const NDist& other) : SensorMod(other) { // Anropa SensorMod kopieringskonstruktor
         // Kopiera ndist-specifika medlemmar
         mu = other.mu;
@@ -64,11 +64,11 @@ public:
         state = generate_random_state(); // Ny random state vid kopiering
     }
     
-    // OBS: Implementering för ndist(gmdist) kräver att gmdist är definierad
-    // och har mean()/cov() metoder, vilket är utanför detta scope.
+    // NOTE: Implementing ndist(gmdist) requires gmdist to be defined
+    // and provide mean()/cov() methods; that is out of scope here.
 
     // ------------------------------------------------------------------
-    // Setters (Motsvarar MATLAB set.mu/set.P)
+    // Setters (corresponding to MATLAB set.mu/set.P)
     // ------------------------------------------------------------------
 
     void set_mu(const Vector& new_mu) {
@@ -76,8 +76,8 @@ public:
             throw std::runtime_error("NDist::set_mu: Cannot change the dimension of mu.");
         }
         mu = new_mu;
-        // SensorMod::nn måste uppdateras om dimensionen ändras (om SensorMod används)
-        // Detta är komplext i C++, så vi förlitar oss på konstruktorn.
+        // SensorMod::nn must be updated if dimension changes (when using SensorMod)
+        // This is complex in C++; we rely on constructors to set it correctly.
     }
 
     void set_P(const Matrix& new_P) {
@@ -91,10 +91,10 @@ public:
     }
 
     // ------------------------------------------------------------------
-    // Indexering (Motsvarar MATLAB Xsubsref/X(i))
+    // Indexing (similar to MATLAB subsref X(i))
     // ------------------------------------------------------------------
 
-    // Använder en funktion istället för operator() för att undvika komplexiteten med Eigen
+    // Use a function instead of operator() to avoid Eigen-related complexity
     NDist subsref(const std::vector<int>& indices) const {
         // Kontrollera index
         for (int i : indices) {
@@ -103,7 +103,7 @@ public:
             }
         }
         
-        // Hämta delar av mu och P (C++ index = MATLAB index - 1)
+        // Extract parts of mu and P (C++ index = MATLAB index - 1)
         Vector new_mu(indices.size());
         Matrix new_P(indices.size(), indices.size());
         std::vector<std::string> new_xlabel(indices.size());
@@ -132,13 +132,13 @@ private:
         return static_cast<long>(std::round(distrib(gen)));
     }
 
-    // Hjälpfunktion för att sätta SensorMod::nn korrekt
+    // Helper to set SensorMod::nn correctly
     static Eigen::Vector4i get_nn(const Vector& mu_) {
-        // nx = dimensionen av mu. nu, ny, nth är 0.
+        // nx = dimension of mu. nu, ny, nth are 0.
         return Eigen::Vector4i(mu_.size(), 0, 0, 0);
     }
     
-    // Hjälpfunktion för att initialisera mu och P med felkontroll
+    // Helper to initialize mu and P with validation
     void initialize(const Vector& mu_, const Matrix& P_) {
         int n = mu_.size();
         
@@ -150,16 +150,16 @@ private:
             throw std::runtime_error("NDIST: mu and P must contain real, finite values.");
         }
         
-        // Utför is_valid_covariance checken (simulerar MATLAB's iscov)
+        // Perform is_valid_covariance check (simulates MATLAB's iscov)
         if (!is_valid_covariance(P_)) {
-            // Här skulle mer specifik felhantering ske, som i MATLAB switch-satsen
+            // More specific error handling would be performed here, similar to MATLAB
             throw std::runtime_error("NDIST: P is not a valid covariance matrix (e.g., not PSD or symmetric).");
         }
         
         mu = mu_;
         P = P_;
         
-        // Sätt default xlabel
+        // Set default xlabel
         xlabel.resize(n);
         for (int i = 0; i < n; ++i) {
             xlabel[i] = "x" + std::to_string(i + 1);

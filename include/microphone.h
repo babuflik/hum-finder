@@ -8,11 +8,11 @@
 
 class Microphone {
 public:
-    // Storlek på datablocket som mikrofonen ska buffra.
-    // T.ex. 4096 prover. Detta bestämmer storleken på TDOA-fönstret.
+    // Size of the data block the microphone buffers.
+    // e.g. 1024 samples. This determines the TDOA window size.
     static constexpr size_t BUFFER_SIZE = 1024; 
 
-    // Konstruktor: Position x, y, z
+    // Constructor: position x, y, z
     Microphone(double x, double y, double z);
 
     // Position getter
@@ -20,27 +20,27 @@ public:
 
     void setPosition(const std::array<double,3>& pos);
     
-    // Lägger till ett nytt ljudprov till bufferten (lägger till i slutet och skriver över äldst om full)
+    // Add a new audio sample to the buffer (append and overwrite oldest when full)
     void addSample(double sample);
     
-    // Returnerar hela den nuvarande bufferten (BUFFERT_SIZE prover).
-    // OBS: Returnerar en KOPIA av bufferten för trådsäkerhet och renhet.
+    // Return the current buffer (BUFFER_SIZE samples).
+    // NOTE: returns a COPY of the buffer for thread-safety and cleanliness.
     std::vector<double> getSamples() const;
     
-    // Returnerar om bufferten är full och redo att behandlas
+    // Returns whether the buffer is full and ready to be processed
     bool isBufferFull() const { return samples_filled_count_ == BUFFER_SIZE; }
 
 private:
-    // Fysisk position i 3D-rymden
+    // Physical 3D position
     std::array<double, 3> position_; 
 
-    // Ringbuffert för ljudprover. std::vector används, men logiken behandlar den som fix storlek.
+    // Ring buffer for audio samples. std::vector is used but logic treats it as fixed-size.
     std::vector<double> samples_; 
     
-    // Index där nästa prov ska läggas in
+    // Index where next sample will be written
     size_t write_index_ = 0; 
     
-    // Antal prover som faktiskt finns i bufferten (för att veta när den är "full")
+    // Number of samples currently in the buffer (to check fullness)
     size_t samples_filled_count_ = 0; 
 };
 

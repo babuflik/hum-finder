@@ -61,6 +61,7 @@ find_package(GTest REQUIRED)
 # Skapa test-executable
 add_executable(run_tests
     tests/test_localizer.cpp
+    tests/test_TDOA_and_ML.cpp
 )
 
 # Länka bibliotek

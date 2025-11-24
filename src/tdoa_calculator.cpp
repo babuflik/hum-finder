@@ -4,15 +4,15 @@
 #include <numeric>
 #include <iostream>
 
-// Standard C++ header för PI (saknas ibland i vissa kompilatorer)
+// Standard C++ header for PI (sometimes missing in certain compilers)
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
 
 TdoaCalculator::TdoaCalculator() {
-    // Kontrollera att FFT_SIZE är en potens av 2 (Krävs för den rekursiva FFT:n)
+    // Check that FFT_SIZE is a power of 2 (Required for the recursive FFT)
     if ((FFT_SIZE > 0) && ((FFT_SIZE & (FFT_SIZE - 1)) != 0)) {
-        std::cerr << "VARNING: FFT_SIZE bör vara en potens av 2 för den aktuella FFT-implementationen!" << std::endl;
+        std::cerr << "WARNING: FFT_SIZE should be a power of two for the current FFT implementation!" << std::endl;
     }
 }
 
@@ -20,12 +20,12 @@ TdoaCalculator::TdoaCalculator() {
 // COOLEY-TUKEY REKURSIV FFT/IFFT IMPLEMENTATION
 // -----------------------------------------------------------------
 
-// Privata rekursiva funktionen för FFT/IFFT
+// Private recursive function for FFT/IFFT
 void TdoaCalculator::recursiveFft(ComplexVector& a, bool inverse) {
     int n = a.size();
     if (n <= 1) return;
 
-    // Dela upp i jämna och udda delar
+    // Split into even and odd parts
     ComplexVector a0(n / 2), a1(n / 2);
     for (int i = 0; i < n / 2; i++) {
         a0[i] = a[2 * i];
@@ -47,10 +47,10 @@ void TdoaCalculator::recursiveFft(ComplexVector& a, bool inverse) {
     }
 }
 
-// Utför FFT
+// Perform FFT
 ComplexVector TdoaCalculator::fft(const RealVector& signal) {
     if (signal.size() != FFT_SIZE) {
-        std::cerr << "FEL: Signalstorlek (" << signal.size() << ") matchar inte FFT_SIZE (" << FFT_SIZE << ")." << std::endl;
+        std::cerr << "ERROR: Signal size (" << signal.size() << ") does not match FFT_SIZE (" << FFT_SIZE << ")." << std::endl;
         return ComplexVector(FFT_SIZE, 0.0);
     }
     
@@ -59,16 +59,16 @@ ComplexVector TdoaCalculator::fft(const RealVector& signal) {
     return result;
 }
 
-// Utför IFFT
+// Perform IFFT
 RealVector TdoaCalculator::ifft(const ComplexVector& spectrum) {
     if (spectrum.size() != FFT_SIZE) {
-        std::cerr << "FEL: Spektrumstorlek (" << spectrum.size() << ") matchar inte FFT_SIZE (" << FFT_SIZE << ")." << std::endl;
+        std::cerr << "ERROR: Spectrum size (" << spectrum.size() << ") does not match FFT_SIZE (" << FFT_SIZE << ")." << std::endl;
         return RealVector(FFT_SIZE, 0.0);
     }
 
     ComplexVector complex_result = spectrum;
     
-    // 1. Invers FFT (använd omvänd tecken)
+    // 1. Inverse FFT (use reversed sign)
     recursiveFft(complex_result, true);
     
     // 2. Normalisering
@@ -87,35 +87,35 @@ RealVector TdoaCalculator::ifft(const ComplexVector& spectrum) {
 // -----------------------------------------------------------------
 
 /*
- * Implementerar ett Bandpass-filter i frekvensdomänen.
- * Isolerar den önskade frekvensen 100 Hz till 300 Hz.
+ * Implements a bandpass filter in the frequency domain.
+ * Isolates the desired frequency range 100 Hz to 300 Hz.
  * * F_res = SAMPLE_RATE / FFT_SIZE = 44100 / 1024 = 43.066 Hz/bin
- * * Cutoff låg: 100 Hz -> Bin 3 (129.19 Hz)
- * Cutoff hög: 300 Hz -> Bin 7 (301.46 Hz)
- * * Range: [Bin 3, Bin 7] och dess speglade motsvarighet [N - 7, N - 3].
+ * * Cutoff low: 100 Hz -> Bin 3 (129.19 Hz)
+ * Cutoff high: 300 Hz -> Bin 7 (301.46 Hz)
+ * * Range: [Bin 3, Bin 7] and its mirrored counterpart [N - 7, N - 3].
  */
 RealVector TdoaCalculator::bandpassFilter(const RealVector& signal) {
     if (signal.size() != FFT_SIZE) {
-        // Bör inte hända om anropet kommer från calculateGccPhat, men en säkerhetskontroll
+        // Should not happen if call comes from calculateGccPhat, but is a safety check
         return signal;
     }
 
-    // 1. FFT
+    // FFT
     ComplexVector spectrum = fft(signal);
 
-    // Frekvensgränser baserat på 43.066 Hz/bin
+    // Frequency limits based on 43.066 Hz/bin
     const int K_LOW = 3;
     const int K_HIGH = 7;
     const size_t N = FFT_SIZE;
     
-    // 2. Nollställ alla frekvenser utanför bandet
+    // 2. Zero all frequencies outside the band
     for (size_t k = 0; k < N; ++k) {
-        // Nollställ för k < K_LOW (lågpass-del)
-        // Nollställ för k > K_HIGH OCH k < N - K_HIGH (området mellan positiva och negativa spektrumet)
-        // Nollställ för k > N - K_LOW (högpass-del i det negativa spektrumet)
+        // Zero for k < K_LOW (lowpass part)
+        // Zero for k > K_HIGH AND k < N - K_HIGH (region between positive and negative spectrum)
+        // Zero for k > N - K_LOW (highpass part in the negative spectrum)
         
         if ((k < K_LOW) || (k > K_HIGH && k < N - K_HIGH) || (k > N - K_LOW)) {
-            // Nollställ om utanför bandet [K_LOW, K_HIGH] U [N - K_HIGH, N - K_LOW]
+            // Zero if outside band [K_LOW, K_HIGH] U [N - K_HIGH, N - K_LOW]
             spectrum[k] = 0.0;
         }
     }
@@ -125,7 +125,7 @@ RealVector TdoaCalculator::bandpassFilter(const RealVector& signal) {
 }
 
 
-// Beräknar TDOA i samples för ett par
+// Calculate TDOA in samples for a pair
 double TdoaCalculator::calculateGccPhat(const RealVector& signal1, const RealVector& signal2) {
     
     // Steg 1: Filtrering 
@@ -136,7 +136,7 @@ double TdoaCalculator::calculateGccPhat(const RealVector& signal1, const RealVec
     ComplexVector spectrum1 = fft(filtered1);
     ComplexVector spectrum2 = fft(filtered2);
 
-    // Steg 3: Beräkna PHAT-vikten och korskorrelationsspektrumet (R_ij^PHAT)
+    // Step 3: Calculate PHAT weight and cross-correlation spectrum (R_ij^PHAT)
     ComplexVector cross_spectrum_phat;
     cross_spectrum_phat.reserve(FFT_SIZE);
 
@@ -156,7 +156,7 @@ double TdoaCalculator::calculateGccPhat(const RealVector& signal1, const RealVec
     // Steg 4: IFFT
     RealVector correlation = ifft(cross_spectrum_phat);
 
-    // Steg 5: Toppdetektering (Hitta indexet med högst magnitud)
+    // Step 5: Peak detection (Find index with highest magnitude)
     double max_corr = 0.0;
     int max_index = 0;
 
@@ -168,8 +168,8 @@ double TdoaCalculator::calculateGccPhat(const RealVector& signal1, const RealVec
         }
     }
 
-    // Hantera cirkulär skiftning (wrap-around) av IFFT-resultatet
-    // Om indexet är större än N/2, betyder det en negativ fördröjning
+    // Handle circular shift (wrap-around) of IFFT result
+    // If index is greater than N/2, it means a negative delay
     int shift_samples = max_index;
     if (max_index > FFT_SIZE / 2) {
         shift_samples = max_index - (int)FFT_SIZE;
@@ -181,11 +181,11 @@ double TdoaCalculator::calculateGccPhat(const RealVector& signal1, const RealVec
 
 // Huvudmetod
 TdoaVector TdoaCalculator::calculate(
-    const std::array<RealVector, MIC_COUNT_TDOA>& audioBuffers
+    const std::array<RealVector, MIC_COUNT>& audioBuffers
 ) {
     TdoaVector result;
 
-    // Indexmappning för de 6 TDOA-paren: (i, j)
+    // Index mapping for the 6 TDOA pairs: (i, j)
     std::array<std::pair<int, int>, MEASUREMENT_DIM_TDOA> mic_pairs = {{
         {0, 1}, {0, 2}, {0, 3}, {1, 2}, {1, 3}, {2, 3}
     }};
@@ -195,13 +195,13 @@ TdoaVector TdoaCalculator::calculate(
         int j = mic_pairs[k].second;
 
         if (audioBuffers[i].size() != FFT_SIZE || audioBuffers[j].size() != FFT_SIZE) {
-            std::cerr << "Fel: Bufferstorlek (" << audioBuffers[i].size() << ") matchar inte FFT_SIZE (" << FFT_SIZE << ")." << std::endl;
-            // Returnerar en nolla, men detta borde hanteras bättre i en riktig applikation
+            std::cerr << "ERROR: Buffer size (" << audioBuffers[i].size() << ") does not match FFT_SIZE (" << FFT_SIZE << ")." << std::endl;
+            // Returns zero; in a real application this should be handled more robustly
             result(k) = 0.0; 
             continue;
         }
         
-        // Beräkna TDOA för paret i och j
+        // Calculate TDOA for pair i and j
         result(k) = calculateGccPhat(audioBuffers[i], audioBuffers[j]);
     }
     

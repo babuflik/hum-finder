@@ -59,7 +59,7 @@ void GccPhat::recursiveFft(ComplexVector& a, bool inverse) {
 }
 
 // -------------------------------------------------------------
-// Enkel bandpass: nollställer frekvenser utanför [low_hz, high_hz]
+// Simple bandpass: zeros frequencies outside [low_hz, high_hz]
 // -------------------------------------------------------------
 void GccPhat::bandpassFilter(ComplexVector& spectrum, double low_hz, double high_hz) {
     double freq_res = sample_rate_ / fft_size_;
@@ -70,7 +70,7 @@ void GccPhat::bandpassFilter(ComplexVector& spectrum, double low_hz, double high
 }
 
 // -------------------------------------------------------------
-// Beräkna TDOA mellan två signaler
+// Calculate TDOA between two signals
 // -------------------------------------------------------------
 double GccPhat::calculateTDOA(const RealVector& sig1, const RealVector& sig2) {
     assert(sig1.size() == fft_size_ && sig2.size() == fft_size_);
@@ -95,7 +95,7 @@ double GccPhat::calculateTDOA(const RealVector& sig1, const RealVector& sig2) {
         else R[k] = 0.0;
     }
 
-    // 4. IFFT för att få korskorrelation
+    // 4. IFFT to get cross-correlation
     RealVector corr = ifft(R);
 
     // 5. Hitta peak
@@ -137,8 +137,8 @@ int main() {
     GccPhat gcc(N, fs);
     double tdoa = gcc.calculateTDOA(sig1, sig2);
 
-    std::cout << "Förväntad TDOA: " << delay_s << " s\n";
-    std::cout << "Beräknad TDOA: " << tdoa << " s\n";
+    std::cout << "Expected TDOA: " << delay_s << " s\n";
+    std::cout << "Calculated TDOA: " << tdoa << " s\n";
 
     return 0;
 }

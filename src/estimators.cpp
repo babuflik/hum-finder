@@ -41,7 +41,7 @@ std::tuple<Sig, SensorMod> ls(const SensorMod& s, const Sig& y) {
     xhat.y = y_est;
     xhat.t = y.t;
     xhat.u = y.u;
-    xhat.xMC = Px_list; // temporärt lagring av covariance
+    xhat.xMC = Px_list; // temporary storage of covariance
 
     SensorMod shat = s;
     if (N==1) {
@@ -165,4 +165,179 @@ lh2(const SensorMod& s, const Sig& y,
     X2 = x2.transpose().replicate(x1.size(),1);
 
     return {lh, x1, x2, px, px0, X1, X2};
+}
+
+// Numerical jacobian of h(t, x, u, th) wrt x
+// h: std::function<Eigen::VectorXd(double,const Eigen::VectorXd&,const Eigen::VectorXd&,const Eigen::VectorXd&)>
+// returns matrix ny x nx
+static Eigen::MatrixXd numerical_jacobian(
+    const SensorMod::DynFunc& h,
+    double t,
+    const Eigen::VectorXd& x,
+    const Eigen::VectorXd& u,
+    const Eigen::VectorXd& th)
+{
+    const double eps = 1e-6;
+    int nx = x.size();
+    Eigen::VectorXd h0 = h(t, x, u, th);
+    int ny = h0.size();
+    Eigen::MatrixXd J(ny, nx);
+    for (int i = 0; i < nx; ++i) {
+        Eigen::VectorXd xp = x;
+        Eigen::VectorXd xm = x;
+        double delta = eps * std::max(1.0, std::abs(x[i]));
+        xp[i] += delta;
+        xm[i] -= delta;
+        Eigen::VectorXd hp = h(t, xp, u, th);
+        Eigen::VectorXd hm = h(t, xm, u, th);
+        J.col(i) = (hp - hm) / (2.0 * delta);
+    }
+    return J;
+}
+
+// Safe inverse: attempts direct inverse, otherwise regularizes
+static Eigen::MatrixXd safe_inverse(const Eigen::MatrixXd& M)
+{
+    const double eps = 1e-8;
+    if (M.rows() != M.cols()) throw std::runtime_error("safe_inverse: M not square");
+    Eigen::FullPivLU<Eigen::MatrixXd> lu(M);
+    if (lu.isInvertible()) {
+        return M.inverse();
+    } else {
+        // Regularize with small diagonal
+        double lambda = eps * M.trace(); // scale regularization by trace
+        Eigen::MatrixXd Mreg = M;
+        if (lambda <= 0) lambda = eps;
+        Mreg += lambda * Eigen::MatrixXd::Identity(M.rows(), M.cols());
+        Eigen::FullPivLU<Eigen::MatrixXd> lu2(Mreg);
+        if (lu2.isInvertible()) return Mreg.inverse();
+        // As last resort, pseudo-inverse via SVD
+        Eigen::JacobiSVD<Eigen::MatrixXd> svd(M, Eigen::ComputeThinU | Eigen::ComputeThinV);
+        double tol = std::max(M.rows(), M.cols()) * svd.singularValues().array().abs().maxCoeff() * std::numeric_limits<double>::epsilon();
+        Eigen::VectorXd invS = svd.singularValues();
+        for (int i = 0; i < invS.size(); ++i) {
+            if (std::abs(invS(i)) > tol) invS(i) = 1.0 / invS(i);
+            else invS(i) = 0.0;
+        }
+        return svd.matrixV() * invS.asDiagonal() * svd.matrixU().transpose();
+    }
+}
+
+// Main CRLB implementation
+Sig crlb(const SensorMod& s, const Sig* y)
+{
+    // Determine nx, ny, N_time
+    int nx = s.nn[0];
+    int ny = s.nn[2];
+
+    // Choose state vector x0: if y provided and y->x has at least one column, use it; else s.x0
+    Eigen::VectorXd x0;
+    if (y != nullptr && y->x.size() > 0 && y->x.cols() > 0) {
+        // assuming y->x is nx x N matrix
+        x0 = y->x.col(0);
+    } else {
+        x0 = s.x0;
+    }
+
+    // Choose number of time samples and iterate
+    int N_time = 1;
+    if (y != nullptr && y->t.size() > 0) N_time = y->t.size();
+
+    // Precompute Pe inverse
+    if (s.pe.rows() != ny || s.pe.cols() != ny) {
+        throw std::runtime_error("crlb: Pe dimensions mismatch");
+    }
+    Eigen::MatrixXd Pe = s.pe;
+    // Try to invert Pe
+    Eigen::MatrixXd Pe_inv = safe_inverse(Pe);
+
+    // Build Fisher information J
+    Eigen::MatrixXd J = Eigen::MatrixXd::Zero(nx, nx);
+
+    for (int k = 0; k < N_time; ++k) {
+        double t_k = (y != nullptr && y->t.size() > k) ? y->t[k] : (k * (1.0 / s.fs));
+        // determine u_k: if y->u exists and has columns
+        Eigen::VectorXd u_k;
+        if (y != nullptr && y->u.size() > 0 && y->u.cols() > k) {
+            u_k = y->u.col(k);
+        } else {
+            // if nu==0, u_k should be zero-length vector
+            int nu = s.nn[1];
+            u_k = Eigen::VectorXd::Zero(nu);
+        }
+
+        // compute Jacobian H (ny x nx)
+        Eigen::MatrixXd H = numerical_jacobian(s.h, t_k, x0, u_k, s.th); // note: using x0 for all k like MATLAB crlb(s,y)
+        // accumulate J
+        J.noalias() += H.transpose() * Pe_inv * H;
+    }
+
+    // Invert J to get CRLB
+    Eigen::MatrixXd Px;
+    // If J is nearly zero or singular, safe_inverse will regularize
+    Px = safe_inverse(J);
+
+    // Prepare output Sig object
+    Sig out;
+    // ASSUMPTION: Sig has members .x (nx x ?), .Px (nx x nx). Adjust if names differ.
+    // set out.x to column vector x0
+    out.x = Eigen::MatrixXd::Zero(nx, 1);
+    out.x.col(0) = x0;
+    out.Px = Px;
+
+    return out;
+}
+
+// crlb2_grid: compute scalar CRLB measure over 2D grid for indices ind
+Eigen::VectorXd crlb2_grid(const SensorMod& s,
+                           const Sig* y,
+                           const Eigen::VectorXd& x1,
+                           const Eigen::VectorXd& x2,
+                           const std::array<int,2>& ind,
+                           const std::string& type)
+{
+    // ind holds 0-based indices of states to vary
+    if (ind[0] < 0 || ind[1] < 0) throw std::runtime_error("crlb2_grid: invalid indices");
+
+    int N1 = x1.size();
+    int N2 = x2.size();
+    int N = N1 * N2;
+
+    Eigen::VectorXd c(N);
+    // Build a copy of y or a temporary Sig to pass to crlb
+    Sig ylocal;
+    if (y != nullptr) ylocal = *y;
+
+    for (int i = 0; i < N1; ++i) {
+        for (int j = 0; j < N2; ++j) {
+            // create a state vector xgrid = s.x0 with selected indices replaced
+            Eigen::VectorXd xgrid = s.x0;
+            xgrid[ind[0]] = x1[i];
+            xgrid[ind[1]] = x2[j];
+
+            // plug into ylocal.x (single-sample)
+            ylocal.x = Eigen::MatrixXd::Zero(s.nn[0], 1);
+            ylocal.x.col(0) = xgrid;
+
+            // call crlb
+            Sig cr = crlb(s, &ylocal);
+            Eigen::MatrixXd Px = cr.Px;
+
+            double scalar = 0.0;
+            if (type == "trace") {
+                scalar = Px.trace();
+            } else if (type == "rmse") {
+                scalar = std::sqrt(Px.trace());
+            } else if (type == "det") {
+                scalar = Px.determinant();
+            } else if (type == "max") {
+                Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> es(Px);
+                scalar = es.eigenvalues().maxCoeff();
+            } else {
+                throw std::runtime_error("crlb2_grid: unknown type");
+            }
+            c[j * N1 + i] = scalar; // column-major like meshgrid
+        }
+    }
+    return c;
 }

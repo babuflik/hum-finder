@@ -5,7 +5,7 @@
 #include <random>
 #include <vector>
 #include <string>
-#include <cmath> // För std::pow, std::sqrt, M_PI
+#include <cmath> // For std::pow, std::sqrt, M_PI
 
 class SensorMod {
 public:
@@ -15,7 +15,7 @@ public:
                                                   const Eigen::VectorXd&)>;
 
     // -----------------------------------------------------
-    // Befintliga medlemmar
+    // Existing members
     // -----------------------------------------------------
     Eigen::Vector4i nn;      // [nx, nu, ny, nth]
 
@@ -29,7 +29,7 @@ public:
     std::string name;
     std::string xlabel, ylabel, ulabel, thlabel;
 
-    // Konstruktor (oförändrad)
+    // Constructor
     SensorMod(const DynFunc& hFunc, const Eigen::Vector4i& nn_)
         : h(hFunc), nn(nn_)
     {
@@ -40,7 +40,7 @@ public:
     }
     
     // -----------------------------------------------------
-    // 1. simulate (Original funktion)
+    // 1. simulate (original function)
     // -----------------------------------------------------
     Sig simulate(const Eigen::VectorXd& t,
                  const Eigen::MatrixXd* xOverride = nullptr,
@@ -58,7 +58,7 @@ public:
 
         std::random_device rd;
         std::mt19937 gen(rd());
-        // OBS: Denna rad använder endast diagonalen (antar okorrelerat brus)
+        // NOTE: This line uses only the diagonal (assumes uncorrelated noise)
         Eigen::VectorXd pe_std = pe.diagonal().cwiseSqrt(); 
 
         for (int k = 0; k < N; ++k) {
@@ -94,19 +94,19 @@ public:
     }
 
     // -----------------------------------------------------
-    // 2. likelihood_function (Ny funktion, motsvarar lh1/lh2)
+    // 2. likelihood_function (new function, corresponds to lh1/lh2)
     // -----------------------------------------------------
     /**
-     * @brief Beräknar den totala Likelihood-funktionen L(x | y) över ett rutnät av tillståndspunkter.
-     * @param y Mätdata som Sig-objekt.
-     * @param xGrid Matris med tillståndspunkter att utvärdera (N_grid x nx).
-     * @param state_indices Ej implementerad, men behålls för framtida kompatibilitet med lh1/lh2.
-     * @return Eigen::VectorXd Vektor med sannolikhetsvärden (Likelihood) för varje gridpunkt.
+    * @brief Compute the total likelihood L(x | y) over a grid of state points.
+    * @param y Measurement data as a Sig object.
+    * @param xGrid Matrix of state points to evaluate (N_grid x nx).
+    * @param state_indices Not implemented, kept for compatibility with lh1/lh2.
+    * @return Eigen::VectorXd Vector with likelihood values for each grid point.
      */
     Eigen::VectorXd likelihood_function(
         const Sig& y, 
         const Eigen::MatrixXd& xGrid,
-        const std::vector<int>& state_indices = {} // {0} är default i C++
+        const std::vector<int>& state_indices = {} // {0} is the default in C++
     )
     {
         int N_grid = xGrid.rows();
@@ -115,33 +115,33 @@ public:
         int nx = nn[0];
         
         if (xGrid.cols() != nx) {
-            throw std::runtime_error("likelihood_function: xGrid måste ha nx kolumner.");
+            throw std::runtime_error("likelihood_function: xGrid must have nx columns.");
         }
         if (pe.rows() != ny || pe.cols() != ny) {
-            throw std::runtime_error("likelihood_function: Mätbruskovarians Pe är fel dimensionerad.");
+            throw std::runtime_error("likelihood_function: Measurement noise covariance Pe has incorrect dimensions.");
         }
 
-        Eigen::VectorXd L = Eigen::VectorXd::Ones(N_grid); // Initiera Likelihood till 1.0
-        Eigen::VectorXd mu_v = Eigen::VectorXd::Zero(ny);  // Mätbrusets medelvärde är noll
+        Eigen::VectorXd L = Eigen::VectorXd::Ones(N_grid); // Initialize likelihood to 1.0
+        Eigen::VectorXd mu_v = Eigen::VectorXd::Zero(ny);  // Measurement noise mean is zero
 
-        // Iterera över alla mätningstidpunkter (k)
+        // Iterate over all measurement time points (k)
         for (int k = 0; k < N_time; ++k) {
-            Eigen::MatrixXd epsi_grid(N_grid, ny); // Mätfelsmatris (N_grid x ny)
+            Eigen::MatrixXd epsi_grid(N_grid, ny); // Measurement error matrix (N_grid x ny)
             
             double t_k = y.t[k];
-            // OBS: y.u kan vara tom (nu=0). Kontrollera om u ska användas eller ignoreras.
-            Eigen::VectorXd u_k = (y.u.cols() > 0) ? y.u.col(k) : Eigen::VectorXd::Zero(nn[1]); 
+            // NOTE: y.u can be empty (nu=0). Check whether u should be used or ignored.
+            Eigen::VectorXd u_k = (y.u.cols() > 0) ? y.u.col(k).eval() : Eigen::VectorXd::Zero(nn[1]);
             
             for (int i = 0; i < N_grid; ++i) {
                 Eigen::VectorXd x_i = xGrid.row(i).transpose();
                 Eigen::VectorXd y_hat_i = h(t_k, x_i, u_k, th);
                 
-                // Mätning y_k - Prediktion y_hat_i
+                // Measurement y_k - prediction y_hat_i
                 Eigen::VectorXd epsi_i = y.y.col(k) - y_hat_i;
                 epsi_grid.row(i) = epsi_i.transpose();
             }
 
-            // Beräkna PDF för felet p(epsi_k | Pe) = p(y_k | x)
+            // Compute PDF for the error p(epsi_k | Pe) = p(y_k | x)
             Eigen::VectorXd p_y_given_x = multivariate_normal_pdf(pe, mu_v, epsi_grid);
             
             // Multiplicera Likelihood: L_total = L_prev * p(y_k | x)
@@ -153,7 +153,7 @@ public:
 
 private:
     // -----------------------------------------------------
-    // 3. multivariate_normal_pdf (Ny intern hjälpfuntion)
+    // 3. multivariate_normal_pdf (New internal helper function)
     // -----------------------------------------------------
     Eigen::VectorXd multivariate_normal_pdf(
         const Eigen::MatrixXd& P, 
@@ -164,7 +164,7 @@ private:
         int N = x.rows();
         
         if (P.rows() != nx || P.cols() != nx || x.cols() != nx) {
-            // Detta ska fångas av anropande funktion, men är en sista utväg
+            // This should be caught by the calling function, but is a last resort
             Eigen::VectorXd p(N);
             p.setZero();
             return p;
@@ -174,7 +174,7 @@ private:
         double detP = P.determinant();
 
         if (detP <= 0 || !P.isApprox(P.transpose())) {
-            // Sätt sannolikheten till 0 om matrisen är singulär eller icke-symmetrisk
+            // Set probability to 0 if matrix is singular or non-symmetric
             p.setZero();
             return p;
         }
@@ -182,7 +182,7 @@ private:
         // Konstant term: 1 / sqrt((2*pi)^nx * det(P))
         double constant = 1.0 / (std::pow(2.0 * M_PI, (double)nx / 2.0) * std::sqrt(detP));
         
-        // Använder P.llt().solve() för numeriskt stabil lösning av P_inv * epsi
+        // Uses P.llt().solve() for numerically stable solution of P_inv * epsi
         Eigen::LLT<Eigen::MatrixXd> llt(P);
         if(llt.info() != Eigen::Success) {
             // Fallback om Cholesky-faktorisering misslyckas (icke-positivt definit)
@@ -193,7 +193,7 @@ private:
         for (int i = 0; i < N; ++i) {
             Eigen::VectorXd epsi = x.row(i).transpose() - mu; 
             
-            // Lösning av temp = P_inv * epsi (numeriskt stabilt)
+            // Solution of temp = P_inv * epsi (numerically stable)
             Eigen::VectorXd temp = llt.solve(epsi);
             
             // Kvadratisk form: V = epsi^T * P_inv * epsi

@@ -43,3 +43,9 @@ build/
 # debug information files
 *.dwo
 
+# Ignore generated plotting/data artifacts
+artifacts/
+
+# Python virtualenv
+.venv/
+
