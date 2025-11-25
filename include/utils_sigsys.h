@@ -317,3 +317,235 @@ inline double condition(const Eigen::MatrixXd& A) {
                   svd.singularValues()(svd.singularValues().size()-1);
     return cond;
 }
+
+/**
+ * @brief Zero-phase digital filtering
+ * C++ implementation of MATLAB filtfilt - simplified version
+ * 
+ * Applies forward and backward filtering to eliminate phase distortion.
+ * This is a simplified implementation for IIR filters.
+ * 
+ * @param b Numerator coefficients (feedforward)
+ * @param a Denominator coefficients (feedback)
+ * @param x Input signal
+ * @return Zero-phase filtered signal
+ */
+inline Eigen::VectorXd filtfilt(const Eigen::VectorXd& b, const Eigen::VectorXd& a, 
+                                const Eigen::VectorXd& x) {
+    int N = x.size();
+    int nb = b.size();
+    int na = a.size();
+    
+    if (N == 0) {
+        return Eigen::VectorXd();
+    }
+    
+    // Normalize by a(0)
+    Eigen::VectorXd b_norm = b / a(0);
+    Eigen::VectorXd a_norm = a / a(0);
+    
+    // Forward filtering
+    Eigen::VectorXd y_forward = Eigen::VectorXd::Zero(N);
+    
+    for (int n = 0; n < N; ++n) {
+        double sum = 0.0;
+        
+        // Feedforward (numerator)
+        for (int k = 0; k < nb && k <= n; ++k) {
+            sum += b_norm(k) * x(n - k);
+        }
+        
+        // Feedback (denominator) - skip a(0) which is 1 after normalization
+        for (int k = 1; k < na && k <= n; ++k) {
+            sum -= a_norm(k) * y_forward(n - k);
+        }
+        
+        y_forward(n) = sum;
+    }
+    
+    // Reverse the forward filtered signal
+    Eigen::VectorXd y_forward_rev(N);
+    for (int i = 0; i < N; ++i) {
+        y_forward_rev(i) = y_forward(N - 1 - i);
+    }
+    
+    // Backward filtering (on reversed signal)
+    Eigen::VectorXd y_backward = Eigen::VectorXd::Zero(N);
+    
+    for (int n = 0; n < N; ++n) {
+        double sum = 0.0;
+        
+        // Feedforward
+        for (int k = 0; k < nb && k <= n; ++k) {
+            sum += b_norm(k) * y_forward_rev(n - k);
+        }
+        
+        // Feedback
+        for (int k = 1; k < na && k <= n; ++k) {
+            sum -= a_norm(k) * y_backward(n - k);
+        }
+        
+        y_backward(n) = sum;
+    }
+    
+    // Reverse back to get final result
+    Eigen::VectorXd result(N);
+    for (int i = 0; i < N; ++i) {
+        result(i) = y_backward(N - 1 - i);
+    }
+    
+    return result;
+}
+
+/**
+ * @brief Linear interpolation
+ * C++ implementation of MATLAB interp - simplified version using linear interpolation
+ * 
+ * @param y1 Input signal values
+ * @param t1 Input time points
+ * @param t2 Output time points (where to interpolate)
+ * @return Interpolated signal values at t2
+ */
+inline Eigen::VectorXd interp(const Eigen::VectorXd& y1, const Eigen::VectorXd& t1, 
+                              const Eigen::VectorXd& t2) {
+    int N1 = y1.size();
+    int N2 = t2.size();
+    
+    if (N1 != t1.size()) {
+        throw std::runtime_error("interp: y1 and t1 must have same length");
+    }
+    
+    if (N1 < 2) {
+        throw std::runtime_error("interp: need at least 2 points for interpolation");
+    }
+    
+    Eigen::VectorXd y2(N2);
+    
+    for (int i = 0; i < N2; ++i) {
+        double t = t2(i);
+        
+        // Find the interval [t1(j), t1(j+1)] containing t
+        if (t <= t1(0)) {
+            // Extrapolate or use first value
+            y2(i) = y1(0);
+        } else if (t >= t1(N1 - 1)) {
+            // Extrapolate or use last value
+            y2(i) = y1(N1 - 1);
+        } else {
+            // Find the right interval
+            int j = 0;
+            for (j = 0; j < N1 - 1; ++j) {
+                if (t >= t1(j) && t <= t1(j + 1)) {
+                    break;
+                }
+            }
+            
+            // Linear interpolation
+            double alpha = (t - t1(j)) / (t1(j + 1) - t1(j));
+            y2(i) = (1.0 - alpha) * y1(j) + alpha * y1(j + 1);
+        }
+    }
+    
+    return y2;
+}
+
+/**
+ * @brief Signal resampling
+ * Resamples signal from sampling rate fs1 to fs2
+ * 
+ * @param y Input signal
+ * @param fs1 Original sampling frequency
+ * @param fs2 Target sampling frequency
+ * @return Resampled signal
+ */
+inline Eigen::VectorXd resample(const Eigen::VectorXd& y, double fs1, double fs2) {
+    int N1 = y.size();
+    
+    if (fs1 <= 0 || fs2 <= 0) {
+        throw std::runtime_error("resample: sampling frequencies must be positive");
+    }
+    
+    if (N1 == 0) {
+        return Eigen::VectorXd();
+    }
+    
+    // Create original time vector
+    Eigen::VectorXd t1(N1);
+    for (int i = 0; i < N1; ++i) {
+        t1(i) = i / fs1;
+    }
+    
+    // Create new time vector with target sampling rate
+    double duration = (N1 - 1) / fs1;
+    int N2 = static_cast<int>(std::ceil(duration * fs2)) + 1;
+    
+    Eigen::VectorXd t2(N2);
+    for (int i = 0; i < N2; ++i) {
+        t2(i) = i / fs2;
+    }
+    
+    // Use interpolation to resample
+    return interp(y, t1, t2);
+}
+
+/**
+ * @brief Downsample signal by integer factor
+ * Simple downsampling by taking every M-th sample
+ * 
+ * @param y Input signal
+ * @param M Downsampling factor
+ * @return Downsampled signal
+ */
+inline Eigen::VectorXd downsample(const Eigen::VectorXd& y, int M) {
+    if (M <= 0) {
+        throw std::runtime_error("downsample: M must be positive");
+    }
+    
+    if (M == 1) {
+        return y;
+    }
+    
+    int N = y.size();
+    int N_new = (N + M - 1) / M;  // Ceiling division
+    
+    Eigen::VectorXd y_down(N_new);
+    
+    for (int i = 0; i < N_new; ++i) {
+        int idx = i * M;
+        if (idx < N) {
+            y_down(i) = y(idx);
+        }
+    }
+    
+    return y_down;
+}
+
+/**
+ * @brief Upsample signal by integer factor
+ * Inserts zeros between samples (needs filtering for proper interpolation)
+ * 
+ * @param y Input signal
+ * @param L Upsampling factor
+ * @return Upsampled signal (with zeros inserted)
+ */
+inline Eigen::VectorXd upsample(const Eigen::VectorXd& y, int L) {
+    if (L <= 0) {
+        throw std::runtime_error("upsample: L must be positive");
+    }
+    
+    if (L == 1) {
+        return y;
+    }
+    
+    int N = y.size();
+    int N_new = N * L;
+    
+    Eigen::VectorXd y_up = Eigen::VectorXd::Zero(N_new);
+    
+    for (int i = 0; i < N; ++i) {
+        y_up(i * L) = y(i);
+    }
+    
+    return y_up;
+}
+

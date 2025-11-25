@@ -25,15 +25,17 @@ This document tracks the implementation status of the MATLAB Signals and Systems
    - ✅ Metadata: `nn`, `name`, `desc`, `marker`, `markerlabel`
    - ✅ Constructors: empty, (y,fs), (y,t), (y,t,u), (y,t,u,x)
    - ✅ Methods: `length()`, `size(dim)`, automatic fs detection
-   - ⏳ TODO: plot(), resample(), filter(), FFT, arithmetic operators
+   - ✅ NEW: `fft()`, `psd()`, `filter_ma()` - FFT and signal processing
+   - ⏳ TODO: plot(), resample(), arithmetic operators
 
 4. **SensorMod** (`include/sensormod.h`)
    - Sensor model class y = h(t,x,u,th) + e
    - ✅ Properties: `h`, `nn`, `x0`, `th`, `pv`, `pe`, `fs`
    - ✅ Methods: `simulate()`, `likelihood_function()`
-   - ⏳ TODO: `ls()`, `wls()`, `ml()`, `estimate()`, `crlb()` as methods
+   - ✅ NEW: `ls()`, `wls()`, `crlb()` - Parameter estimation methods
+   - ⏳ TODO: `ml()` (full NLS), `estimate()`
 
-### ✅ Distribution Classes (10/11 DONE)
+### ✅ Distribution Classes (11/11 DONE - ALL COMPLETE!)
 
 5. **NDist** - Gaussian/Normal distribution ✅ COMPLETE
 6. **UDist** (`include/udist.h`) ✅ COMPLETE
@@ -47,6 +49,11 @@ This document tracks the implementation status of the MATLAB Signals and Systems
 8. **Chi2Dist** (`include/chi2dist.h`) ✅ COMPLETE
    - Chi-squared distribution χ²(n)
    - Custom incomplete gamma for CDF
+   
+9. **NCChi2Dist** (`include/ncchi2dist.h`) ✅ COMPLETE - NEW!
+   - Non-central chi-squared distribution χ²(n, λ)
+   - Modified Bessel function implementation
+   - All moments (mean, variance, skewness, kurtosis)
    
 9. **GammaDist** (`include/gammadist.h`) ✅ COMPLETE
    - Gamma distribution Γ(k, θ)
@@ -72,23 +79,27 @@ This document tracks the implementation status of the MATLAB Signals and Systems
     - Log-normal distribution LogN(μ, σ)
     - All moments closed-form
     
-15. **NCChi2Dist** ⏳ TODO
-    - Non-central chi-squared distribution
+15. **NCChi2Dist** (`include/ncchi2dist.h`) ✅ COMPLETE - NEW!
+    - Non-central chi-squared χ²(n, λ)
+    - Modified Bessel function I_ν
 
-### ✅ Utility Functions (7/50+ DONE)
+### ✅ Utility Functions (12/50+ DONE)
 
-16. **utils_sigsys.h** ✅ PARTIAL
+16. **utils_sigsys.h** ✅ ENHANCED
     - ✅ `numgrad()` - Numerical gradient (central differences)
     - ✅ `numhess()` - Numerical Hessian
+    - ✅ `numjac()` - Numerical Jacobian
     - ✅ `sqrtcov()` - Cholesky decomposition
     - ✅ `iscov()` - Enhanced covariance validation with error codes
     - ✅ `confellipse()` - Confidence ellipse for 2D plots
     - ✅ `getwindow()` - Hamming, Hann, Blackman windows
     - ✅ `condition()` - Matrix condition number
-    - ⏳ `filtfilt()` - Zero-phase filtering
-    - ⏳ `ncfilter()` - NC filter
-    - ⏳ `interp()` - Interpolation
-    - ⏳ `resample()` - Resampling
+    - ✅ NEW: `filtfilt()` - Zero-phase filtering (forward-backward)
+    - ✅ NEW: `interp()` - Linear interpolation
+    - ✅ NEW: `resample()` - Signal resampling (change sampling rate)
+    - ✅ NEW: `downsample()` - Integer downsampling
+    - ✅ NEW: `upsample()` - Integer upsampling with zero insertion
+    - ⏳ `ncfilter()` - NC filter (TODO)
 
 ### ✅ NL Class - Nonlinear Systems (COMPLETE)
 
@@ -100,8 +111,8 @@ This document tracks the implementation status of the MATLAB Signals and Systems
    - ✅ `ekf()` - Extended Kalman Filter
    - ✅ `ukf()` - Unscented Kalman Filter
    - ✅ `pf()` - Particle Filter with systematic resampling
+   - ✅ NEW: `crlb()` - Cramér-Rao Lower Bound ✅ COMPLETE
    - ⏳ `pmf()` - Point Mass Filter (TODO)
-   - ⏳ `crlb()` - Cramér-Rao Lower Bound (TODO)
 
 ### ❌ Not Yet Implemented
 
@@ -140,14 +151,16 @@ This document tracks the implementation status of the MATLAB Signals and Systems
 
 ## Current Test Status
 
-- ✅ All existing tests pass (2/2 test suites):
-  - ✅ LocalizerTest (1 test)
-  - ✅ ToolboxTest (16 tests):
-    - 10 distribution tests (NDist, UDist, ExpDist, Chi2Dist, GammaDist, GMDist, TDist, BetaDist, EmpDist, LogNDist)
-    - 6 utility tests (NumGrad, NumHess, SqrtCov, IsCov, ConfEllipse, GetWindow)
+- ✅ ALL tests pass (4/4 test suites, 100%):
+  - ✅ LocalizerTest (2 tests)
+  - ✅ ToolboxTest (21 tests):
+    - 11 distribution tests (all distributions complete!)
+    - 10 utility tests (NumGrad, NumHess, SqrtCov, IsCov, ConfEllipse, GetWindow, Filtfilt, Interp, Resample, Downsample/Upsample)
+  - ✅ NLTest (6 tests for EKF, UKF, PF, CRLB) ✅ NEW: CRLB test added
+  - ✅ SigTest (5 tests for signal processing)
 - ✅ Backward compatibility maintained
 - ✅ Build system updated for new headers
-- ✅ All tests passing (17/17)
+- ✅ All tests passing (21/21 toolbox tests, 6/6 NL tests)
 
 ## Next Steps
 

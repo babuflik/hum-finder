@@ -2,7 +2,7 @@
 
 ## Completed Components (Session Summary)
 
-### Distribution Classes ✅ 10/11 Complete
+### Distribution Classes ✅ 11/11 Complete
 
 All distribution classes inherit from `PDFClass` base and provide:
 - Random sampling (`rand()`)
@@ -22,9 +22,9 @@ All distribution classes inherit from `PDFClass` base and provide:
 | BetaDist | `include/betadist.h` | ✅ Complete | Beta Beta(α, β) with incomplete beta |
 | EmpDist | `include/empdist.h` | ✅ Complete | Empirical distribution with KDE |
 | LogNDist | `include/logndist.h` | ✅ Complete | Log-normal LogN(μ, σ) |
-| NCChi2Dist | - | ⏳ TODO | Non-central chi-squared |
+| NCChi2Dist | `include/ncchi2dist.h` | ✅ Complete | Non-central chi-squared χ²(n, λ) with Bessel I_ν |
 
-### Utility Functions ✅ 7 Complete
+### Utility Functions ✅ 12 Complete
 
 Located in `include/utils_sigsys.h`:
 
@@ -37,6 +37,11 @@ Located in `include/utils_sigsys.h`:
 | `confellipse()` | ✅ | 2D confidence ellipse generation |
 | `getwindow()` | ✅ | Hamming, Hann, Blackman, rectangular |
 | `condition()` | ✅ | Matrix condition number via SVD |
+| `filtfilt()` | ✅ | Zero-phase forward-backward filtering |
+| `interp()` | ✅ | Linear interpolation |
+| `resample()` | ✅ | Signal resampling (rate conversion) |
+| `downsample()` | ✅ | Integer downsampling |
+| `upsample()` | ✅ | Integer upsampling with zero insertion |
 
 ### Infrastructure ✅
 
@@ -144,6 +149,37 @@ ctest --output-on-failure   # Run all tests
 
 ---
 
-**Implementation Progress**: ~35% of full MATLAB SigSys Toolbox (10/27 classes, 7/50+ utilities)
-**Test Status**: ✅ 17/17 tests passing
+**Implementation Progress**: ~40% of full MATLAB SigSys Toolbox (11/27 classes, 12/50+ utilities)
+**Test Status**: ✅ 33/33 tests passing (4 test suites, 100%)
 **Build Status**: ✅ Clean build, no errors/warnings
+
+## Latest Updates (CRLB Implementation)
+
+### NL::crlb() - Cramér-Rao Lower Bound ✅ Complete
+
+**Files Modified:**
+- `include/nl.h` - Added crlb() method declaration with full documentation
+- `src/nl.cpp` - Implemented CRLB algorithm (~140 lines)
+- `tests/test_nl.cpp` - Added CRLB_Basic test
+
+**Implementation Details:**
+The CRLB method computes the theoretical lower bound on estimation variance for a nonlinear system. It uses:
+- True state trajectory from input signal z.x for linearization
+- Kalman filter equations with linearized dynamics
+- Joseph form covariance update for numerical stability
+- Returns Sig object with CRLB covariances in Px field
+
+**Key Features:**
+- Supports custom Q and R noise covariances (override or use model defaults)
+- Optional pred_horizon parameter (0=filter, 1=prediction)
+- Numerical Jacobian computation via numjac() when analytical derivatives not provided
+- For linear systems, CRLB matches Kalman filter steady-state covariance
+
+**Test Results:**
+```
+[ RUN      ] NLTest.CRLB_Basic
+CRLB test passed. Final CRLB: 0.0215325, KF covariance: 0.0215325
+[       OK ] NLTest.CRLB_Basic (2 ms)
+```
+
+The test validates that for a linear system, the CRLB exactly matches the Kalman filter covariance, confirming correct implementation.

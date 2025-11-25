@@ -369,3 +369,143 @@ NL::Matrix NL::pf(const Sig& z, const Matrix& u, int N_particles) const {
     
     return x_estimates;
 }
+
+/**
+ * @brief Cramér-Rao Lower Bound computation
+ */
+Sig NL::crlb(const Sig& z,
+             const Matrix& P0_init,
+             const Matrix& Q_override,
+             const Matrix& R_override,
+             int pred_horizon) const {
+    
+    if (std::isnan(fs)) {
+        throw std::runtime_error("NL::crlb: only discrete time models supported");
+    }
+    
+    if (z.x.cols() == 0) {
+        throw std::runtime_error("NL::crlb: input signal z must have state x");
+    }
+    
+    if (pred_horizon != 0 && pred_horizon != 1) {
+        throw std::runtime_error("NL::crlb: pred_horizon must be 0 or 1");
+    }
+    
+    int nx = nn(0), nu = nn(1), ny = nn(2);
+    int N = z.y.cols();
+    
+    // Get noise covariances
+    Matrix Q;
+    if (Q_override.rows() > 0) {
+        Q = Q_override;
+    } else if (pv) {
+        Q = std::dynamic_pointer_cast<NDist>(pv)->P;
+    } else {
+        Q = Matrix::Zero(nx, nx);
+    }
+    
+    Matrix R;
+    if (R_override.rows() > 0) {
+        R = R_override;
+    } else if (pe) {
+        R = std::dynamic_pointer_cast<NDist>(pe)->P;
+    } else {
+        throw std::runtime_error("NL::crlb: measurement noise covariance R must be defined");
+    }
+    
+    if (R.diagonal().sum() == 0) {
+        throw std::runtime_error("NL::crlb: R must be positive definite");
+    }
+    
+    // Initialize P
+    Matrix P;
+    if (P0_init.rows() > 0) {
+        P = P0_init;
+    } else if (px0) {
+        P = std::dynamic_pointer_cast<NDist>(px0)->P;
+    } else {
+        P = 1000.0 * Matrix::Identity(nx, nx);
+    }
+    
+    // Storage for results
+    Matrix x_filter(nx, N);
+    Matrix x_pred(nx, N);
+    std::vector<Matrix> P_filter, P_pred;
+    Matrix y_filter(ny, N);
+    Matrix y_pred(ny, N);
+    std::vector<Matrix> Py_filter, Py_pred;
+    
+    Matrix I_nx = Matrix::Identity(nx, nx);
+    
+    for (int k = 0; k < N; ++k) {
+        // Get input
+        Vector u_k;
+        if (z.u.cols() > k) {
+            u_k = z.u.col(k);
+        } else {
+            u_k = Vector::Zero(nu);
+        }
+        double t_k = z.t(k);
+        
+        // Use true state from z.x for linearization
+        Vector x_true = z.x.col(k);
+        
+        // Measurement update (using true state)
+        Vector y_hat = h(t_k, x_true, u_k, th);
+        
+        // Compute measurement Jacobian C = dh/dx at true state
+        Matrix C = compute_dhdx(t_k, x_true, u_k, th);
+        
+        // Kalman gain
+        Matrix S = C * P * C.transpose() + R;
+        Matrix K = P * C.transpose() * S.inverse();
+        
+        // Update covariance using Joseph form for numerical stability
+        Matrix I_KC = I_nx - K * C;
+        P = I_KC * P * I_KC.transpose() + K * R * K.transpose();
+        P = 0.5 * (P + P.transpose());  // Ensure symmetry
+        
+        // Store filter results
+        x_filter.col(k) = x_true;
+        P_filter.push_back(P);
+        y_filter.col(k) = y_hat;
+        Py_filter.push_back(C * P * C.transpose() + R);
+        
+        // Time update (prediction for next step)
+        Matrix A = compute_dfdx(t_k, x_true, u_k, th);
+        P = A * P * A.transpose() + Q;
+        
+        // Store prediction results
+        x_pred.col(k) = x_true;
+        y_pred.col(k) = y_hat;
+        P_pred.push_back(P);
+        Py_pred.push_back(C * P * C.transpose() + R);
+    }
+    
+    // Create output signal
+    Sig result;
+    result.t = z.t;
+    result.u = z.u;
+    result.fs = z.fs;
+    result.xlabel = xlabel;
+    result.ylabel = ylabel;
+    result.ulabel = ulabel;
+    result.name = name;
+    
+    if (pred_horizon == 0) {
+        // Filter mode
+        result.y = y_filter;
+        result.x = x_filter;
+        result.Py = Py_filter;
+        result.Px = P_filter;
+    } else {
+        // Predictor mode
+        result.y = y_pred;
+        result.x = x_pred;
+        result.Py = Py_pred;
+        result.Px = P_pred;
+    }
+    
+    return result;
+}
+

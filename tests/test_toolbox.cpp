@@ -9,6 +9,7 @@
 #include "betadist.h"
 #include "empdist.h"
 #include "logndist.h"
+#include "ncchi2dist.h"
 #include "utils_sigsys.h"
 #include <iostream>
 #include <Eigen/Dense>
@@ -237,6 +238,41 @@ TEST(DistributionTest, LogNDist_Basic) {
     std::cout << "LogNDist test passed." << std::endl;
 }
 
+// Test NCChi2Dist (Non-central chi-squared distribution)
+TEST(DistributionTest, NCChi2Dist_Basic) {
+    // Test non-central chi-squared distribution
+    NCChi2Dist nc(3, 2.0);
+    
+    EXPECT_EQ(nc.length(), 1);
+    
+    // Mean should be n + lambda = 3 + 2 = 5
+    EXPECT_NEAR(nc.mean()(0), 5.0, 1e-10);
+    
+    // Variance should be 2*n + 4*lambda = 6 + 8 = 14
+    EXPECT_NEAR(nc.var(), 14.0, 1e-10);
+    
+    // Test sampling
+    Eigen::MatrixXd samples = nc.rand(100);
+    EXPECT_EQ(samples.rows(), 100);
+    EXPECT_EQ(samples.cols(), 1);
+    
+    // All samples should be positive
+    EXPECT_TRUE((samples.array() > 0.0).all());
+    
+    // Test PDF
+    Eigen::MatrixXd test_points(1, 1);
+    test_points << 5.0;
+    Eigen::VectorXd pdf_vals = nc.pdf(test_points);
+    EXPECT_GT(pdf_vals(0), 0.0);
+    
+    // Test central case (lambda = 0)
+    NCChi2Dist central(3, 0.0);
+    EXPECT_NEAR(central.mean()(0), 3.0, 1e-10);
+    EXPECT_NEAR(central.var(), 6.0, 1e-10);
+    
+    std::cout << "NCChi2Dist test passed. Mean: " << nc.mean()(0) << ", Var: " << nc.var() << std::endl;
+}
+
 // Test numerical utilities
 TEST(UtilsTest, NumGrad) {
     // Test on a simple quadratic function
@@ -337,7 +373,98 @@ TEST(UtilsTest, GetWindow) {
     std::cout << "GetWindow test passed." << std::endl;
 }
 
+TEST(UtilsTest, Filtfilt) {
+    // Create a simple signal with a step
+    int N = 100;
+    Eigen::VectorXd x(N);
+    for (int i = 0; i < N; ++i) {
+        x(i) = (i < N/2) ? 0.0 : 1.0;
+    }
+    
+    // Simple moving average filter (FIR)
+    Eigen::VectorXd b(3);
+    b << 1.0/3.0, 1.0/3.0, 1.0/3.0;
+    Eigen::VectorXd a(1);
+    a << 1.0;
+    
+    Eigen::VectorXd y = filtfilt(b, a, x);
+    
+    EXPECT_EQ(y.size(), N);
+    // Zero-phase filter should not introduce phase shift
+    // Check that filtered signal is smoother
+    double variance_x = (x.array() - x.mean()).square().mean();
+    double variance_y = (y.array() - y.mean()).square().mean();
+    EXPECT_LT(variance_y, variance_x * 1.1);  // Some smoothing occurred
+    
+    std::cout << "Filtfilt test passed." << std::endl;
+}
+
+TEST(UtilsTest, Interp) {
+    // Create simple linear signal
+    Eigen::VectorXd t1(5);
+    t1 << 0.0, 1.0, 2.0, 3.0, 4.0;
+    Eigen::VectorXd y1(5);
+    y1 << 0.0, 2.0, 4.0, 6.0, 8.0;  // y = 2*t
+    
+    // Interpolate at intermediate points
+    Eigen::VectorXd t2(3);
+    t2 << 0.5, 1.5, 2.5;
+    
+    Eigen::VectorXd y2 = interp(y1, t1, t2);
+    
+    EXPECT_EQ(y2.size(), 3);
+    EXPECT_NEAR(y2(0), 1.0, 1e-10);  // 2*0.5
+    EXPECT_NEAR(y2(1), 3.0, 1e-10);  // 2*1.5
+    EXPECT_NEAR(y2(2), 5.0, 1e-10);  // 2*2.5
+    
+    std::cout << "Interp test passed." << std::endl;
+}
+
+TEST(UtilsTest, Resample) {
+    // Create signal at 100 Hz
+    double fs1 = 100.0;
+    int N1 = 100;
+    Eigen::VectorXd y1(N1);
+    for (int i = 0; i < N1; ++i) {
+        y1(i) = std::sin(2.0 * M_PI * 5.0 * i / fs1);  // 5 Hz sine wave
+    }
+    
+    // Resample to 50 Hz (downsample by 2)
+    double fs2 = 50.0;
+    Eigen::VectorXd y2 = resample(y1, fs1, fs2);
+    
+    // Should have approximately half the samples
+    EXPECT_GT(y2.size(), N1/2 - 5);
+    EXPECT_LT(y2.size(), N1/2 + 5);
+    
+    std::cout << "Resample test passed. N1=" << N1 << ", N2=" << y2.size() << std::endl;
+}
+
+TEST(UtilsTest, DownsampleUpsample) {
+    Eigen::VectorXd x(10);
+    for (int i = 0; i < 10; ++i) {
+        x(i) = i;
+    }
+    
+    // Downsample by 2
+    Eigen::VectorXd y_down = downsample(x, 2);
+    EXPECT_EQ(y_down.size(), 5);
+    EXPECT_NEAR(y_down(0), 0.0, 1e-10);
+    EXPECT_NEAR(y_down(1), 2.0, 1e-10);
+    EXPECT_NEAR(y_down(2), 4.0, 1e-10);
+    
+    // Upsample by 2
+    Eigen::VectorXd y_up = upsample(x, 2);
+    EXPECT_EQ(y_up.size(), 20);
+    EXPECT_NEAR(y_up(0), 0.0, 1e-10);
+    EXPECT_NEAR(y_up(1), 0.0, 1e-10);  // Zero inserted
+    EXPECT_NEAR(y_up(2), 1.0, 1e-10);
+    
+    std::cout << "Downsample/Upsample test passed." << std::endl;
+}
+
 int main(int argc, char **argv) {
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }
+

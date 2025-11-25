@@ -1,5 +1,6 @@
 #pragma once
 #include "sig.h"
+#include "utils_sigsys.h"
 #include <Eigen/Dense>
 #include <functional>
 #include <random>
@@ -149,6 +150,193 @@ public:
         }
 
         return L;
+    }
+
+    /**
+     * @brief Least Squares estimation
+     * @param y Measurement signal
+     * @return Pair of (state estimate signal, updated sensor model)
+     * 
+     * Computes: argmin sum((y - H*x)^T * (y - H*x))
+     * Uses numerical gradient to linearize h around x0
+     */
+    std::pair<Sig, SensorMod> ls(const Sig& y) {
+        int N = y.t.size();
+        int nx = nn[0];
+        int ny = nn[2];
+        
+        if (pe.rows() == 0 || pe.cols() == 0) {
+            throw std::runtime_error("sensormod.ls: pe must be defined");
+        }
+        
+        Eigen::MatrixXd x_est(N, nx);
+        Eigen::MatrixXd y_est(N, ny);
+        std::vector<Eigen::MatrixXd> Px_vec, Py_vec;
+        
+        for (int k = 0; k < N; ++k) {
+            double t_k = y.t[k];
+            Eigen::VectorXd u_k;
+            if (y.u.cols() > k) {
+                u_k = y.u.col(k);
+            } else {
+                u_k = Eigen::VectorXd::Zero(nn[1]);
+            }
+            
+            // Compute Jacobian H = dh/dx at x0
+            auto h_func = [this, t_k, u_k](const Eigen::VectorXd& x) {
+                return this->h(t_k, x, u_k, this->th);
+            };
+            Eigen::MatrixXd H = numjac(h_func, x0);
+            
+            // Predicted measurement
+            Eigen::VectorXd yhat = h(t_k, x0, u_k, th);
+            
+            // Least squares solution: x = (H^T H)^{-1} H^T (y - yhat + H*x0)
+            Eigen::MatrixXd HtH = H.transpose() * H;
+            Eigen::MatrixXd PP = HtH.completeOrthogonalDecomposition().pseudoInverse();
+            Eigen::VectorXd ff = H.transpose() * (y.y.col(k) - yhat + H * x0);
+            
+            x_est.row(k) = (PP * ff).transpose();
+            y_est.row(k) = (yhat + H * (x_est.row(k).transpose() - x0)).transpose();
+            
+            // Covariance: P = (H^T H)^{-1} H^T Pe H (H^T H)^{-1}
+            Eigen::MatrixXd Px_k = PP * (H.transpose() * pe * H) * PP;
+            Px_vec.push_back(Px_k);
+            
+            Eigen::MatrixXd Py_k = H * Px_k * H.transpose();
+            Py_vec.push_back(Py_k);
+        }
+        
+        Sig result;
+        result.y = y_est.transpose();
+        result.t = y.t;
+        result.u = y.u;
+        result.x = x_est.transpose();
+        result.Py = Py_vec;
+        result.Px = Px_vec;
+        
+        SensorMod shat = *this;
+        if (N == 1) {
+            shat.x0 = x_est.row(0).transpose();
+        }
+        
+        return {result, shat};
+    }
+    
+    /**
+     * @brief Weighted Least Squares estimation
+     * @param y Measurement signal
+     * @return Pair of (state estimate signal, updated sensor model)
+     * 
+     * Computes: argmin sum((y - H*x)^T * Pe^{-1} * (y - H*x))
+     * Uses numerical gradient to linearize h around x0
+     */
+    std::pair<Sig, SensorMod> wls(const Sig& y) {
+        int N = y.t.size();
+        int nx = nn[0];
+        int ny = nn[2];
+        
+        if (pe.rows() == 0 || pe.cols() == 0) {
+            throw std::runtime_error("sensormod.wls: pe must be defined");
+        }
+        
+        Eigen::MatrixXd Rinv = pe.completeOrthogonalDecomposition().pseudoInverse();
+        Eigen::MatrixXd x_est(N, nx);
+        Eigen::MatrixXd y_est(N, ny);
+        std::vector<Eigen::MatrixXd> Px_vec, Py_vec;
+        
+        for (int k = 0; k < N; ++k) {
+            double t_k = y.t[k];
+            Eigen::VectorXd u_k;
+            if (y.u.cols() > k) {
+                u_k = y.u.col(k);
+            } else {
+                u_k = Eigen::VectorXd::Zero(nn[1]);
+            }
+            
+            // Compute Jacobian H = dh/dx at x0
+            auto h_func = [this, t_k, u_k](const Eigen::VectorXd& x) {
+                return this->h(t_k, x, u_k, this->th);
+            };
+            Eigen::MatrixXd H = numjac(h_func, x0);
+            
+            // Predicted measurement
+            Eigen::VectorXd yhat = h(t_k, x0, u_k, th);
+            
+            // Weighted least squares: x = (H^T R^{-1} H)^{-1} H^T R^{-1} (y - yhat + H*x0)
+            Eigen::MatrixXd HtRinvH = H.transpose() * Rinv * H;
+            Eigen::MatrixXd PP = HtRinvH.completeOrthogonalDecomposition().pseudoInverse();
+            Eigen::VectorXd ff = H.transpose() * Rinv * (y.y.col(k) - yhat + H * x0);
+            
+            x_est.row(k) = (PP * ff).transpose();
+            y_est.row(k) = (yhat + H * (x_est.row(k).transpose() - x0)).transpose();
+            
+            // Covariance for WLS: P = (H^T R^{-1} H)^{-1}
+            Eigen::MatrixXd Px_k = 0.5 * (PP + PP.transpose());  // Symmetrize
+            Px_vec.push_back(Px_k);
+            
+            Eigen::MatrixXd Py_k = H * Px_k * H.transpose();
+            Py_vec.push_back(Py_k);
+        }
+        
+        Sig result;
+        result.y = y_est.transpose();
+        result.t = y.t;
+        result.u = y.u;
+        result.x = x_est.transpose();
+        result.Py = Py_vec;
+        result.Px = Px_vec;
+        
+        SensorMod shat = *this;
+        if (N == 1) {
+            shat.x0 = x_est.row(0).transpose();
+        }
+        
+        return {result, shat};
+    }
+    
+    /**
+     * @brief Cramér-Rao Lower Bound computation
+     * @param y Measurement signal (uses y.x as state, or x0 if empty)
+     * @return Sig object with CRLB in Px
+     * 
+     * Computes the Fisher Information Matrix and its inverse
+     */
+    Sig crlb(const Sig* y = nullptr) {
+        int nx = nn[0];
+        int ny = nn[2];
+        
+        Eigen::VectorXd x_eval = (y && y->x.cols() > 0) ? y->x.col(0).eval() : x0;
+        Eigen::VectorXd u_eval = (y && y->u.cols() > 0) ? y->u.col(0).eval() : Eigen::VectorXd::Zero(nn[1]);
+        double t_eval = (y && y->t.size() > 0) ? y->t[0] : 0.0;
+        
+        if (y && y->t.size() > 1) {
+            throw std::runtime_error("CRLB can only be computed for one sample at a time");
+        }
+        
+        // Compute Jacobian H = dh/dx
+        auto h_func = [this, t_eval, u_eval](const Eigen::VectorXd& x) {
+            return this->h(t_eval, x, u_eval, this->th);
+        };
+        Eigen::MatrixXd H = numjac(h_func, x_eval);
+        
+        // Fisher Information Matrix: I = H^T * Pe^{-1} * H
+        Eigen::MatrixXd Rinv = pe.completeOrthogonalDecomposition().pseudoInverse();
+        Eigen::MatrixXd FIM = H.transpose() * Rinv * H;
+        
+        // CRLB = I^{-1}
+        Eigen::MatrixXd CRLB = FIM.completeOrthogonalDecomposition().pseudoInverse();
+        
+        // Create result signal
+        Sig result;
+        result.x = x_eval;
+        result.t = Eigen::VectorXd::Constant(1, t_eval);
+        result.u = u_eval;
+        result.y = h(t_eval, x_eval, u_eval, th);
+        result.Px = {CRLB};
+        result.Py = {H * CRLB * H.transpose()};
+        
+        return result;
     }
 
 private:

@@ -3,6 +3,8 @@
 #include <vector>
 #include <string>
 #include <stdexcept>
+#include <complex>
+#include <fftw3.h>
 
 /**
  * @brief SIG is the data class for signals (C++ implementation of MATLAB sig.m)
@@ -318,4 +320,130 @@ private:
             fs = std::numeric_limits<double>::quiet_NaN(); // Non-uniform
         }
     }
+    
+    /**
+     * @brief Compute FFT of signal outputs
+     * @param output_idx Which output to process (default: 0, all outputs)
+     * @return Matrix of FFT coefficients (complex, stored as pairs of real/imag columns)
+     * 
+     * For each output y_i, computes FFT and returns N/2+1 frequency bins
+     * Result is stored as [real_1, imag_1, real_2, imag_2, ...] for each output
+     */
+    Eigen::MatrixXcd fft(int output_idx = -1) const {
+        if (y.rows() == 0) {
+            throw std::runtime_error("Sig::fft: signal is empty");
+        }
+        
+        int N = y.rows();
+        int ny_local = (output_idx >= 0) ? 1 : y.cols();
+        int start_idx = (output_idx >= 0) ? output_idx : 0;
+        int end_idx = (output_idx >= 0) ? output_idx + 1 : y.cols();
+        
+        // Number of frequency bins (N/2 + 1 for real input)
+        int n_freq = N / 2 + 1;
+        
+        Eigen::MatrixXcd result(n_freq, end_idx - start_idx);
+        
+        // Allocate FFTW arrays
+        double* in = (double*) fftw_malloc(sizeof(double) * N);
+        fftw_complex* out = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * n_freq);
+        
+        // Create plan (will be reused for multiple columns)
+        fftw_plan plan = fftw_plan_dft_r2c_1d(N, in, out, FFTW_ESTIMATE);
+        
+        // Process each output
+        for (int col = start_idx; col < end_idx; ++col) {
+            // Copy data to FFTW input array
+            for (int i = 0; i < N; ++i) {
+                in[i] = y(i, col);
+            }
+            
+            // Execute FFT
+            fftw_execute(plan);
+            
+            // Copy results to Eigen matrix
+            for (int i = 0; i < n_freq; ++i) {
+                result(i, col - start_idx) = std::complex<double>(out[i][0], out[i][1]);
+            }
+        }
+        
+        // Cleanup
+        fftw_destroy_plan(plan);
+        fftw_free(in);
+        fftw_free(out);
+        
+        return result;
+    }
+    
+    /**
+     * @brief Compute Power Spectral Density (PSD) estimate
+     * @param output_idx Which output to process (default: -1 for all)
+     * @return Matrix with PSD values and corresponding frequencies
+     * 
+     * Returns Nx2 matrix where first column is frequency, second is PSD magnitude
+     */
+    Eigen::MatrixXd psd(int output_idx = 0) const {
+        if (std::isnan(fs)) {
+            throw std::runtime_error("Sig::psd: requires uniform sampling (fs must be set)");
+        }
+        
+        Eigen::MatrixXcd fft_result = fft(output_idx);
+        int n_freq = fft_result.rows();
+        int N = y.rows();
+        
+        Eigen::MatrixXd result(n_freq, 2);
+        
+        // Frequency vector
+        double df = 1.0 / (fs * N);
+        for (int i = 0; i < n_freq; ++i) {
+            result(i, 0) = i * df;
+        }
+        
+        // PSD magnitude (squared absolute value, normalized)
+        for (int i = 0; i < n_freq; ++i) {
+            double mag = std::abs(fft_result(i, 0));
+            result(i, 1) = (mag * mag) / (fs * N);
+            
+            // Double the power for non-DC and non-Nyquist components
+            if (i > 0 && i < n_freq - 1) {
+                result(i, 1) *= 2.0;
+            }
+        }
+        
+        return result;
+    }
+    
+    /**
+     * @brief Apply simple moving average filter
+     * @param window_size Number of points in the moving average
+     * @return New Sig object with filtered outputs
+     */
+    Sig filter_ma(int window_size) const {
+        if (window_size < 1) {
+            throw std::runtime_error("Sig::filter_ma: window_size must be positive");
+        }
+        
+        Sig result = *this;
+        int N = y.rows();
+        int ny_local = y.cols();
+        
+        result.y = Eigen::MatrixXd::Zero(N, ny_local);
+        
+        for (int col = 0; col < ny_local; ++col) {
+            for (int i = 0; i < N; ++i) {
+                int start = std::max(0, i - window_size / 2);
+                int end = std::min(N - 1, i + window_size / 2);
+                int count = end - start + 1;
+                
+                double sum = 0.0;
+                for (int j = start; j <= end; ++j) {
+                    sum += y(j, col);
+                }
+                result.y(i, col) = sum / count;
+            }
+        }
+        
+        return result;
+    }
 };
+

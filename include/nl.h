@@ -183,6 +183,25 @@ public:
      */
     Matrix pf(const Sig& z, const Matrix& u = Matrix(), int N = 1000) const;
     
+    /**
+     * @brief Cramér-Rao Lower Bound (CRLB) computation
+     * @param z Measurement signal with true states in z.x
+     * @param P0_init Initial covariance (optional)
+     * @param Q_override Process noise covariance override (optional)
+     * @param R_override Measurement noise covariance override (optional)
+     * @param pred_horizon Prediction horizon: 0 for filter, 1 for predictor
+     * @return Sig object with CRLB in Px and Py
+     * 
+     * Computes the parametric Cramér-Rao Lower Bound for state estimation.
+     * The CRLB provides the theoretical lower bound on estimation variance
+     * for any unbiased estimator. Uses the true states from z.x to linearize.
+     */
+    Sig crlb(const Sig& z,
+             const Matrix& P0_init = Matrix(),
+             const Matrix& Q_override = Matrix(),
+             const Matrix& R_override = Matrix(),
+             int pred_horizon = 0) const;
+    
 private:
     /**
      * @brief Compute numerical Jacobian of f with respect to x
