@@ -1,6 +1,6 @@
 # Humming Localization Project
 
-This project implements a sensor network model utilizing three microphone sensors to localize the source of a low-frequency humming sound. The system captures audio data, analyzes it using a Discrete Fourier Transform (DFT), and employs triangulation techniques to determine the sound source's location.
+This project implements a **real-time** sensor network model utilizing four microphone sensors to localize the source of a low-frequency humming sound. The system captures audio data, computes Time Difference of Arrival (TDOA) using GCC-PHAT, and employs Extended/Unscented Kalman Filtering for robust position tracking.
 
 **Extended Implementation**: This project also includes a comprehensive C++ port of the MATLAB SigSys Toolbox, providing probability distributions, nonlinear filtering (EKF/UKF/PF), and signal processing capabilities.
 
@@ -13,14 +13,25 @@ cmake ..
 make -j4
 ```
 
+### Run Real-Time Localization
+```bash
+./streaming_example      # Simulated moving source
+./realtime_localizer     # Continuous tracking demo
+./localize_realtime      # Real-time with microphones (simulated)
+```
+
+### Process Audio Files
+```bash
+# Generate test files
+python3 tools/generate_test_audio.py --output-dir test_data
+
+# Run localization from files
+./localize_from_files test_data/mic1.csv test_data/mic2.csv test_data/mic3.csv test_data/mic4.csv
+```
+
 ### Run Tests
 ```bash
 ctest --output-on-failure  # All tests: 28/28 passing
-```
-
-### Run Localization
-```bash
-./humming_localization
 ```
 
 ### Visualize Results
@@ -31,24 +42,33 @@ make plot3d ELEV=30 AZIM=45  # 3D plot with custom viewing angles
 
 ## Current Implementation Status
 
+- ✅ **Real-Time Tracking**: EKF/UKF with ~43 Hz update rate
+- ✅ **File Input Support**: Load audio from WAV or CSV files
+- ✅ **Live Microphones**: Real-time capture with PortAudio integration ready
+- ✅ **TDOA Estimation**: GCC-PHAT algorithm with bandpass filtering (100-300 Hz)
 - ✅ **10 Probability Distributions**: NDist, UDist, ExpDist, Chi2Dist, GammaDist, GMDist, TDist, BetaDist, EmpDist, LogNDist
 - ✅ **NL Filtering Framework**: EKF, UKF, Particle Filter with simulation
 - ✅ **Signal Processing**: Sig class with statistics, extraction, downsampling
 - ✅ **Numerical Utilities**: Gradient, Hessian, Jacobian, covariance tools
 - ✅ **28 Tests Passing**: Full test coverage for all new functionality
 
-See `CONTINUATION_GUIDE.md` for implementation details and next steps.
+**See also**:
+- `FILE_INPUT_GUIDE.md` - Complete guide for file input and real-time microphones
+- `REALTIME_GUIDE.md` - Comprehensive real-time implementation guide
+- `QUICKREF_REALTIME.md` - Quick reference for real-time usage
 
 ## Project Structure
 
   - **main.cpp**: Entry point of the application.
+  - **realtime_localizer.cpp**: Thread-based continuous localization.
+  - **streaming_example.cpp**: Example with simulated moving source.
   - **microphone.cpp**: Implements the Microphone class for audio capture.
-  - **dft.cpp**: Implements the DFT class for frequency analysis.
-  - **localizer.cpp**: Implements the Localizer class for sound source triangulation.
+  - **tdoa_calculator.cpp**: GCC-PHAT TDOA estimation.
+  - **localizer.cpp**: Implements the Localizer class with EKF/UKF.
   - **utils.cpp**: Contains utility functions for data processing and calculations.
 
   - **microphone.h**: Declaration of the Microphone class.
-  - **dft.h**: Declaration of the DFT class.
+  - **tdoa_calculator.h**: TDOA calculation interface.
   - **localizer.h**: Declaration of the Localizer class.
   - **utils.h**: Declaration of utility functions.
 

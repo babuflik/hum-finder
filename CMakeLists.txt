@@ -26,8 +26,9 @@ add_library(humming_core STATIC
     src/tdoa_calculator.cpp
     src/localizer.cpp
     src/gcc_phat.cpp
-        src/estimators.cpp
-        src/nl.cpp
+    src/estimators.cpp
+    src/nl.cpp
+    src/audio_file_loader.cpp
 )
 
 target_include_directories(humming_core PUBLIC
@@ -48,6 +49,53 @@ add_executable(humming_localization
 
 target_link_libraries(humming_localization PRIVATE
     humming_core
+)
+
+# -------------------------------------------------------------------
+# Real-time localization executable
+# -------------------------------------------------------------------
+add_executable(realtime_localizer
+    src/realtime_localizer.cpp
+)
+
+target_link_libraries(realtime_localizer PRIVATE
+    humming_core
+    pthread
+)
+
+# -------------------------------------------------------------------
+# Streaming example
+# -------------------------------------------------------------------
+add_executable(streaming_example
+    examples/streaming_example.cpp
+)
+
+target_link_libraries(streaming_example PRIVATE
+    humming_core
+    pthread
+)
+
+# -------------------------------------------------------------------
+# File-based localization
+# -------------------------------------------------------------------
+add_executable(localize_from_files
+    src/localize_from_files.cpp
+)
+
+target_link_libraries(localize_from_files PRIVATE
+    humming_core
+)
+
+# -------------------------------------------------------------------
+# Real-time microphone localization
+# -------------------------------------------------------------------
+add_executable(localize_realtime
+    src/localize_realtime.cpp
+)
+
+target_link_libraries(localize_realtime PRIVATE
+    humming_core
+    pthread
 )
 
 # -------------------------------------------------------------------

@@ -10,6 +10,10 @@ enum class FilterType { EKF1, EKF2, UKF };
 
 class Localizer {
 public:
+    // ---------------- Constants ----------------
+    static constexpr int STATE_DIM = 6;        // x,y,z,vx,vy,vz
+    static constexpr int MEASUREMENT_DIM = 6;  // 6 TDOA pairs
+
     Localizer(
         const std::array<Microphone, 4>& microphones,
         double dt,
@@ -21,6 +25,16 @@ public:
         const std::array<std::vector<double>, 4>& audioBuffers
     );
 
+    // Get current covariance matrix (uncertainty)
+    Eigen::Matrix<double, STATE_DIM, STATE_DIM> getCovariance() const {
+        return P_;
+    }
+
+    // Get current state estimate
+    Eigen::Matrix<double, STATE_DIM, 1> getState() const {
+        return x_;
+    }
+
 private:
     // ---------------- Config ----------------
     FilterType filter_type_;
@@ -29,8 +43,6 @@ private:
     double sample_rate_;
 
     // ---------------- State ----------------
-    static constexpr int STATE_DIM = 6;        // x,y,z,vx,vy,vz
-    static constexpr int MEASUREMENT_DIM = 6;  // 6 TDOA pairs
     Eigen::Matrix<double, STATE_DIM,1> x_;
     Eigen::Matrix<double, STATE_DIM, STATE_DIM> P_;
     Eigen::Matrix<double, STATE_DIM, STATE_DIM> Q_;
