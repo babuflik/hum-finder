@@ -1,6 +1,9 @@
 #build files
 build/
 
+#Matlab-files
+matlab_resources/
+
 # Prerequisites
 *.d
 
