@@ -223,6 +223,101 @@ static Eigen::MatrixXd safe_inverse(const Eigen::MatrixXd& M)
     }
 }
 
+// ------------------------
+// Maximum Likelihood (ML) Estimator
+// ------------------------
+std::tuple<Sig, SensorMod, Eigen::MatrixXd> ml(const SensorMod& s, const Sig& y) {
+    if (s.pe.size() == 0) throw std::runtime_error("pe must be defined");
+
+    int nx = s.nn[0];
+    int ny = s.nn[2];
+    
+    // Create a non-const copy for likelihood computation
+    SensorMod s_copy = s;
+    
+    // Create a grid around the initial guess
+    // For 3D: create a reasonable search grid
+    double search_range = 2.0; // meters
+    int grid_points_per_dim = 21;
+    
+    // Build grid based on dimensionality
+    Eigen::MatrixXd grid;
+    
+    if (nx == 2) {
+        // 2D grid
+        int N_grid = grid_points_per_dim * grid_points_per_dim;
+        grid.resize(N_grid, nx);
+        int idx = 0;
+        for (int i = 0; i < grid_points_per_dim; ++i) {
+            for (int j = 0; j < grid_points_per_dim; ++j) {
+                double x = s.x0[0] - search_range + 2.0 * search_range * i / (grid_points_per_dim - 1);
+                double y_val = s.x0[1] - search_range + 2.0 * search_range * j / (grid_points_per_dim - 1);
+                grid(idx, 0) = x;
+                grid(idx, 1) = y_val;
+                idx++;
+            }
+        }
+    } else if (nx == 3) {
+        // 3D grid - use coarser grid to keep computation reasonable
+        int gp = 15; // coarser for 3D
+        int N_grid = gp * gp * gp;
+        grid.resize(N_grid, nx);
+        int idx = 0;
+        for (int i = 0; i < gp; ++i) {
+            for (int j = 0; j < gp; ++j) {
+                for (int k = 0; k < gp; ++k) {
+                    double x = s.x0[0] - search_range + 2.0 * search_range * i / (gp - 1);
+                    double y_val = s.x0[1] - search_range + 2.0 * search_range * j / (gp - 1);
+                    double z = s.x0[2] - search_range + 2.0 * search_range * k / (gp - 1);
+                    grid(idx, 0) = x;
+                    grid(idx, 1) = y_val;
+                    grid(idx, 2) = z;
+                    idx++;
+                }
+            }
+        }
+    } else {
+        throw std::runtime_error("ml: only supports nx=2 or nx=3");
+    }
+    
+    // Compute likelihood over grid
+    Eigen::VectorXd L = s_copy.likelihood_function(y, grid);
+    
+    // Find maximum likelihood
+    int best_idx;
+    L.maxCoeff(&best_idx);
+    
+    Eigen::VectorXd x_ml = grid.row(best_idx).transpose();
+    
+    // Prepare output
+    Sig xhat;
+    xhat.x.resize(nx, 1);
+    xhat.x.col(0) = x_ml;
+    
+    // Compute predicted measurement at ML estimate
+    int nu = s.nn[1];
+    Eigen::VectorXd u_k;
+    if (y.u.size() > 0 && y.u.cols() > 0) {
+        u_k = y.u.col(0);
+    } else {
+        u_k = Eigen::VectorXd::Zero(nu);
+    }
+    double t_k = y.t.size() > 0 ? y.t[0] : 0.0;
+    xhat.y.resize(ny, 1);
+    xhat.y.col(0) = s.h(t_k, x_ml, u_k, s.th);
+    
+    xhat.t = y.t;
+    xhat.u = y.u;
+    
+    SensorMod shat = s;
+    shat.x0 = x_ml;
+    
+    // Return grid as likelihood matrix (reshape for visualization if needed)
+    Eigen::MatrixXd L_matrix = L; // Keep as vector for now
+    
+    return {xhat, shat, L_matrix};
+}
+
 // Main CRLB implementation
 Sig crlb(const SensorMod& s, const Sig* y)
 {

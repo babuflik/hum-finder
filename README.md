@@ -1,282 +1,56 @@
-# Humming Localization Project
+# Hum-Finder
 
-This project implements a **real-time** sensor network model utilizing four microphone sensors to localize the source of a low-frequency humming sound. The system captures audio data, computes Time Difference of Arrival (TDOA) using GCC-PHAT, and employs Extended/Unscented Kalman Filtering for robust position tracking.
-
-**Extended Implementation**: This project also includes a comprehensive C++ port of the MATLAB SigSys Toolbox, providing probability distributions, nonlinear filtering (EKF/UKF/PF), and signal processing capabilities.
+Acoustic source localization for finding annoying low-frequency drone sounds in apartments.
 
 ## Quick Start
 
-### Build
 ```bash
-cd build
-cmake ..
-make -j4
+# Build
+mkdir build && cd build
+cmake .. && make
+
+# Test
+ctest --output-on-failure
+
+# Find that annoying sound
+./localize_from_files mic1.wav mic2.wav mic3.wav mic4.wav
 ```
 
-### Run Real-Time Localization
-```bash
-./streaming_example      # Simulated moving source
-./realtime_localizer     # Continuous tracking demo
-./localize_realtime      # Real-time with microphones (simulated)
-```
+## What It Does
 
-### Process Audio Files
-```bash
-# Generate test files
-python3 tools/generate_test_audio.py --output-dir test_data
+Pinpoints the 3D location of continuous sounds (hum, buzz, drone) using 4+ microphones:
+- ✅ HVAC systems
+- ✅ Refrigerators  
+- ✅ Electrical transformers
+- ✅ Water leaks
+- ✅ Any continuous noise
 
-# Run localization from files
-./localize_from_files test_data/mic1.csv test_data/mic2.csv test_data/mic3.csv test_data/mic4.csv
-```
+**Accuracy**: 0.1-1.0m depending on source type and microphone placement.
 
-### Run Tests
-```bash
-ctest --output-on-failure  # All tests: 28/28 passing
-```
+## Documentation
 
-### Visualize Results
-```bash
-make plot      # 2D plot
-make plot3d ELEV=30 AZIM=45  # 3D plot with custom viewing angles
-```
+- **`DOCS.md`** - Complete documentation (user guide, API, architecture)
+- **`PRACTICAL_DRONE_FINDING_GUIDE.md`** - Step-by-step instructions for end users
+- **`FILE_INPUT_GUIDE.md`** - Using audio files
+- **`REALTIME_GUIDE.md`** - Live microphone streaming
+- **`CONTINUATION_GUIDE.md`** - Developer notes
 
-## Current Implementation Status
+## Features
 
-- ✅ **Real-Time Tracking**: EKF/UKF with ~43 Hz update rate
-- ✅ **File Input Support**: Load audio from WAV or CSV files
-- ✅ **Live Microphones**: Real-time capture with PortAudio integration ready
-- ✅ **TDOA Estimation**: GCC-PHAT algorithm with bandpass filtering (100-300 Hz)
-- ✅ **10 Probability Distributions**: NDist, UDist, ExpDist, Chi2Dist, GammaDist, GMDist, TDist, BetaDist, EmpDist, LogNDist
-- ✅ **NL Filtering Framework**: EKF, UKF, Particle Filter with simulation
-- ✅ **Signal Processing**: Sig class with statistics, extraction, downsampling
-- ✅ **Numerical Utilities**: Gradient, Hessian, Jacobian, covariance tools
-- ✅ **28 Tests Passing**: Full test coverage for all new functionality
+- 6 estimation algorithms (LS, WLS, ML, EKF, UKF, CRLB)
+- File-based and realtime modes
+- Works with any continuous sound (doesn't need to be pure tone)
+- Comprehensive test suite (60 tests)
+- Validated with real-world scenarios
 
-**See also**:
-- `FILE_INPUT_GUIDE.md` - Complete guide for file input and real-time microphones
-- `REALTIME_GUIDE.md` - Comprehensive real-time implementation guide
-- `QUICKREF_REALTIME.md` - Quick reference for real-time usage
+## Requirements
 
-## Project Structure
-
-  - **main.cpp**: Entry point of the application.
-  - **realtime_localizer.cpp**: Thread-based continuous localization.
-  - **streaming_example.cpp**: Example with simulated moving source.
-  - **microphone.cpp**: Implements the Microphone class for audio capture.
-  - **tdoa_calculator.cpp**: GCC-PHAT TDOA estimation.
-  - **localizer.cpp**: Implements the Localizer class with EKF/UKF.
-  - **utils.cpp**: Contains utility functions for data processing and calculations.
-
-  - **microphone.h**: Declaration of the Microphone class.
-  - **tdoa_calculator.h**: TDOA calculation interface.
-  - **localizer.h**: Declaration of the Localizer class.
-  - **utils.h**: Declaration of utility functions.
-
-  - **test_dft.cpp**: Unit tests for the DFT class.
-  - **test_localizer.cpp**: Unit tests for the Localizer class.
-
-
-
-
-## Setup Instructions
-
-1. Clone the repository:
-   ```
-   git clone <repository-url>
-   cd humming-localization-cpp
-   ```
-
-2. Create a build directory and navigate into it:
-   ```
-   mkdir build
-   cd build
-   ```
-
-3. Run CMake to configure the project:
-   ```
-   cmake ..
-   ```
-
-4. Build the project:
-   ```
-   make
-   ```
-
-## Dependencies
-
-This project requires several system and development libraries to build and run. Key dependencies are discovered in `CMakeLists.txt` and `cmake/modules/FindFFTW3.cmake`.
-
-
-Quick install examples (Debian/Ubuntu):
-
-```bash
-sudo apt update
-sudo apt install -y build-essential cmake libeigen3-dev libfftw3-dev libgtest-dev
-# On some Ubuntu versions, libgtest-dev installs sources only; build and install the library:
-cd /usr/src/gtest || true
-sudo cmake .
-sudo make
-sudo cp lib/*.a /usr/lib || true
-```
-
-Fedora (example):
-
-```bash
-sudo dnf install -y cmake gcc-c++ eigen3-devel fftw-devel gtest-devel
-```
-
-macOS (Homebrew):
-
-```bash
-brew update
-brew install cmake eigen fftw googletest
-```
-
-If `FFTW3` or `Eigen3` are installed in non-standard locations, set `CMAKE_PREFIX_PATH` or provide `-DFFTW3_INCLUDE_DIR`/`-DFFTW3_LIBRARY` when invoking `cmake`.
-
-Important files referencing these dependencies:
-
-
-## Usage
-
-After building the project, you can run the application using the following command:
-```
-./humming-localization-cpp
-```
-
-The application will initialize the microphone sensors, capture audio data, and process it to localize the source of the humming sound.
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a pull request or open an issue for any suggestions or improvements.
+- CMake 3.14+
+- C++17
+- Eigen3
+- FFTW3
+- Google Test (optional, for tests)
 
 ## License
 
-This project is licensed under the MIT License. See the LICENSE file for more details.
-
-## Plotting estimation results
-
-I added a plotting utility in `tools/plot_estimates.py` and sample-data generators to visualize sensor layouts, target positions, estimates and confidence ellipses/ellipsoids.
-
-### Quick Start (using Makefile)
-
-The easiest way to generate plots after running tests:
-
-```bash
-# 2D plotting (using test artifacts)
-make plot
-
-# 3D plotting with custom viewing angle
-make plot3d ELEV=20 AZIM=45
-
-# Default viewing angle: ELEV=30 AZIM=-60
-make plot3d
-```
-
-### 2D Plotting
-
-Manual command:
-
-```bash
-# from repo root
-python3 tools/generate_sample_data.py
-python3 tools/plot_estimates.py --sensors artifacts/sensors.csv --targets artifacts/targets.csv \
-   --estimates artifacts/estimates.csv --cov artifacts/covariances.npy --outfile artifacts/plot.png --show
-```
-
-Or simply:
-```bash
-make plot
-```
-
-### 3D Plotting
-
-For 3D visualization with confidence ellipsoids:
-
-```bash
-# Generate 3D sample data
-python3 tools/generate_sample_data_3d.py
-
-# Plot in 3D with custom viewing angle
-python3 tools/plot_estimates.py --sensors artifacts/sensors_3d.csv --targets artifacts/targets_3d.csv \
-   --estimates artifacts/estimates_3d.csv --cov artifacts/covariances_3d.npy --3d \
-   --elev 20 --azim 45 --outfile artifacts/plot_3d.png
-```
-
-Or use the Makefile for easier commands:
-```bash
-make plot3d              # Default view (elevation=30°, azimuth=-60°)
-make plot3d ELEV=20 AZIM=45   # Custom viewing angle
-```
-
-The `--elev` parameter controls the elevation angle (vertical tilt), and `--azim` controls the azimuth (horizontal rotation) of the 3D plot.
-
-Python dependencies:
-
-```bash
-pip3 install -r requirements.txt
-```
-
-How to export data from C++ tests:
-
-- The project does not yet write CSV/numpy outputs by default. To export data from tests or code, add a small serializer where you have access to sensor positions, estimated positions and covariance matrices. Example C++ snippet (pseudo-code) you can drop into a test or helper:
-
-```cpp
-// example: write estimate and 2x2 covariance to CSV / binary
-#include <fstream>
-#include <Eigen/Dense>
-
-void write_estimate(const std::string &path, const Eigen::Vector2d &x, const Eigen::Matrix2d &P) {
-      std::ofstream f(path);
-      f << x(0) << "," << x(1) << "\n";
-      f << P(0,0) << "," << P(0,1) << "\n";
-      f << P(1,0) << "," << P(1,1) << "\n";
-}
-```
-
-Then load the values into `plot_estimates.py` (you can convert the CSV into the `estimates.csv` / `covariances.npy` formats the script expects). If you'd like, I can add automatic exporting to the test runner or a small C++ helper that writes `sensors.csv`, `estimates.csv` and `covariances.npy` directly from `humming_core` types.
-
-Virtual environment (recommended)
-
-Create and use a Python virtual environment to isolate plotting dependencies:
-
-```bash
-# create venv in project root
-python3 -m venv .venv
-# activate (Linux / macOS bash)
-source .venv/bin/activate
-# install requirements
-pip install -U pip
-pip install -r requirements.txt
-
-# run the demo
-python3 tools/generate_sample_data.py
-python3 tools/plot_estimates.py --sensors sensors.csv --targets targets.csv \
-   --estimates estimates.csv --cov covariances.npy --show
-```
-
-To deactivate the venv:
-
-```bash
-deactivate
-```
-
-Makefile convenience
-
-There is a top-level `Makefile` with convenience targets to manage the Python virtual environment:
-
-- `make venv` — creates `.venv` (or the directory set via `VENV_DIR`) and installs `requirements.txt` using the Python interpreter in `PYTHON` (defaults: `.venv` and `python3`).
-- `make clean-venv` — removes the venv directory (defaults to `.venv`).
-
-Examples:
-
-```bash
-# create venv (default .venv)
-make venv
-
-# create venv with custom python or dir
-make venv PYTHON=python3.11 VENV_DIR=.venv3.11
-
-# remove venv
-make clean-venv
-```
+See LICENSE file.

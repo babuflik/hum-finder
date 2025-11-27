@@ -157,3 +157,36 @@ target_link_libraries(test_sig
         pthread
 )
 add_test(NAME SigTest COMMAND test_sig)
+
+# All estimators test executable (comprehensive test suite)
+add_executable(test_all_estimators tests/test_all_estimators.cpp)
+target_link_libraries(test_all_estimators
+    PRIVATE
+        humming_core
+        GTest::GTest
+        GTest::Main
+        pthread
+)
+add_test(NAME AllEstimatorsTest COMMAND test_all_estimators)
+
+# Real-world drone localization test
+add_executable(test_real_world_drone tests/test_real_world_drone.cpp)
+target_link_libraries(test_real_world_drone
+    PRIVATE
+        humming_core
+        GTest::GTest
+        GTest::Main
+        pthread
+)
+add_test(NAME RealWorldDroneTest COMMAND test_real_world_drone)
+
+# Broadband/multi-frequency drone test
+add_executable(test_broadband_drone tests/test_broadband_drone.cpp)
+target_link_libraries(test_broadband_drone
+    PRIVATE
+        humming_core
+        GTest::GTest
+        GTest::Main
+        pthread
+)
+add_test(NAME BroadbandDroneTest COMMAND test_broadband_drone)
