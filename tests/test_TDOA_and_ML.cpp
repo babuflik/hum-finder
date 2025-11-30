@@ -1,10 +1,10 @@
 #include <gtest/gtest.h>
 #include <Eigen/Dense>
 #include <cmath>
-#include "sensormod.h"
-#include "sig.h"
+#include <sensor_fusion/sensormod.h>
+#include <sensor_fusion/sig.h>
 #include "utils.h"
-#include "estimators.h"
+#include <sensor_fusion/estimators.h>
 
 // -------------------------------------------------------
 // Simple GCC-PHAT (without FFTW, uses direct cross-correlation)

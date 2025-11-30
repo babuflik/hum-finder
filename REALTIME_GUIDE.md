@@ -9,6 +9,31 @@ Your system already supports **real-time estimation** through the `Localizer` cl
 - **Unscented Kalman Filter (UKF)** - Uses sigma points for better nonlinear handling
 - **State persistence** - Maintains position/velocity state (`x_`) and uncertainty (`P_`) between updates
 
+**Note:** Real-time mode requires **4 microphones** for continuous tracking. The 3-microphone multi-recording approach (`localize_multi_recording`) is designed for offline/batch processing only, as it requires repositioning mics between recordings.
+
+## Microphone Requirements
+
+### Real-Time Mode: 4 Microphones (Standard)
+
+**Required for continuous tracking:**
+- 4 synchronized microphones
+- Fixed positions (no movement during tracking)
+- Can track moving sources
+- Updates at ~43 Hz (every 23ms)
+
+### Batch Mode: 3 Microphones (Alternative)
+
+**For stationary sources only:**
+- Use `localize_multi_recording` executable instead
+- Take multiple recordings at different positions
+- Combine offline for improved accuracy
+- See `MULTI_RECORDING_GUIDE.md` for details
+
+**Not suitable for real-time** because:
+- Requires repositioning mics between measurements
+- No temporal tracking (batch processing only)
+- Cannot track moving sources
+
 ## Current Architecture
 
 ```

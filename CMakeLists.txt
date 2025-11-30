@@ -18,6 +18,12 @@ find_package(FFTW3 REQUIRED)        # uses your custom module
 find_package(GTest REQUIRED)
 
 # -------------------------------------------------------------------
+# Sensor Fusion Toolbox (subdirectory)
+# -------------------------------------------------------------------
+set(SENSOR_FUSION_BUILD_EXAMPLES OFF CACHE BOOL "Don't build sensor fusion examples in main project")
+add_subdirectory(sensor-fusion)
+
+# -------------------------------------------------------------------
 # Library: humming_core
 # -------------------------------------------------------------------
 add_library(humming_core STATIC
@@ -26,8 +32,6 @@ add_library(humming_core STATIC
     src/tdoa_calculator.cpp
     src/localizer.cpp
     src/gcc_phat.cpp
-    src/estimators.cpp
-    src/nl.cpp
     src/audio_file_loader.cpp
 )
 
@@ -38,6 +42,7 @@ target_include_directories(humming_core PUBLIC
 target_link_libraries(humming_core PUBLIC
     Eigen3::Eigen
     FFTW3::fftw3
+    SensorFusion::sensor_fusion
 )
 
 # -------------------------------------------------------------------
@@ -83,6 +88,17 @@ add_executable(localize_from_files
 )
 
 target_link_libraries(localize_from_files PRIVATE
+    humming_core
+)
+
+# -------------------------------------------------------------------
+# Multi-recording localization (3 mics, multiple recordings)
+# -------------------------------------------------------------------
+add_executable(localize_multi_recording
+    src/localize_multi_recording.cpp
+)
+
+target_link_libraries(localize_multi_recording PRIVATE
     humming_core
 )
 

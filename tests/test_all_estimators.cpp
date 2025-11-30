@@ -2,11 +2,11 @@
 #include <Eigen/Dense>
 #include <cmath>
 #include <iostream>
-#include "sensormod.h"
-#include "sig.h"
+#include <sensor_fusion/sensormod.h>
+#include <sensor_fusion/sig.h>
 #include "utils.h"
-#include "estimators.h"
-#include "nl.h"
+#include <sensor_fusion/estimators.h>
+#include <sensor_fusion/nl.h>
 
 /**
  * Comprehensive test suite for all estimators (LS, WLS, ML, CRLB, EKF, UKF)

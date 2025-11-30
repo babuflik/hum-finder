@@ -1,5 +1,5 @@
-#include "sensormod.h"
-#include "estimators.h" // ls, wls, ml, crlb
+#include <sensor_fusion/sensormod.h>
+#include <sensor_fusion/estimators.h> // ls, wls, ml, crlb
 #include <gtest/gtest.h>
 #include <Eigen/Dense>
 #include <iostream>

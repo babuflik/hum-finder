@@ -68,7 +68,9 @@ Complete step-by-step guide for conducting acoustic source localization in a rea
 
 ## Equipment Setup
 
-### Minimum Equipment (Budget: ~$100-150)
+### Minimum Equipment
+
+#### Standard 4-Mic Setup (Budget: ~$100-150)
 
 **4 USB Microphones:**
 - Recommended: [Blue Snowball](https://www.bluemic.com/) (~$50 each) or similar
@@ -86,6 +88,24 @@ Complete step-by-step guide for conducting acoustic source localization in a rea
 - Notebook and pen (to record positions)
 - Optional: Mic stands/clips (for precise positioning)
 - Optional: Small weights (to stabilize mics)
+
+#### NEW: Budget 3-Mic Setup (Budget: ~$75-120)
+
+**For stationary sources only!**
+
+**3 USB Microphones or Smartphones:**
+- Same options as above, but only need 3 devices
+- **25% cost savings** compared to 4-mic setup
+- Requires taking multiple recordings (2-3 sessions)
+
+**Tradeoffs:**
+- ✅ Lower hardware cost
+- ✅ Can achieve similar accuracy with multiple recordings
+- ⚠️ Source MUST be stationary between recordings
+- ⚠️ Takes longer (multiple recording sessions)
+- ⚠️ Must reposition microphones between recordings
+
+**See "3-Microphone Multi-Recording" section below for details**
 
 ### Recommended Equipment (Budget: ~$300-500)
 
@@ -198,6 +218,109 @@ m │    ?    │  Mic1: 0.4m
 4. **Mark position** with tape (in case mic moves)
 
 **Pro tip:** Take photos of mic positions for reference.
+
+---
+
+## 3-Microphone Multi-Recording (Alternative Method)
+
+### When to Use This Method
+
+**✅ Use 3-mic multi-recording when:**
+- You only have 3 recording devices (phones, USB mics, etc.)
+- The sound source is definitely stationary (HVAC, transformer, refrigerator)
+- You want to minimize hardware cost
+- You have time for 2-3 recording sessions
+
+**❌ Don't use this method when:**
+- Source might be moving or intermittent
+- You need results immediately
+- You already have 4 microphones
+
+### Concept
+
+Since the source doesn't move, you can take multiple recordings with 3 mics at different positions and combine them for better accuracy.
+
+**Standard approach:** 4 mics × 1 recording = 1 estimate  
+**Multi-recording approach:** 3 mics × 2 recordings = 2 estimates → averaged result
+
+### Step-by-Step Procedure
+
+#### Recording 1: Ground Level Triangle
+
+1. **Position 3 mics in equilateral triangle:**
+   ```
+   Mic 1: [1.0, 1.0, 0.0]   - Floor level
+   Mic 2: [1.5, 1.0, 0.0]   - 50cm away
+   Mic 3: [1.25, 1.43, 0.0] - Forms triangle
+   ```
+
+2. **Record 30 seconds** simultaneously
+
+3. **Save files:** `rec1_mic1.wav`, `rec1_mic2.wav`, `rec1_mic3.wav`
+
+4. **Write down exact positions** in notebook
+
+#### Recording 2: Elevated Triangle
+
+1. **Move all 3 mics up** (0.5-1.0m higher):
+   ```
+   Mic 1: [1.0, 1.0, 0.8]   - Same X,Y, +0.8m Z
+   Mic 2: [1.5, 1.0, 0.8]   
+   Mic 3: [1.25, 1.43, 0.8]
+   ```
+
+2. **Record another 30 seconds**
+
+3. **Save files:** `rec2_mic1.wav`, `rec2_mic2.wav`, `rec2_mic3.wav`
+
+4. **Write down new positions**
+
+#### Optional Recording 3: Different Location
+
+**For maximum accuracy**, take a third recording at a completely different location:
+```
+Mic 1: [3.0, 2.0, 0.5]   - Different area
+Mic 2: [3.5, 2.0, 0.5]
+Mic 3: [3.25, 2.43, 0.5]
+```
+
+### Running 3-Mic Localization
+
+```bash
+cd /path/to/recordings
+./localize_multi_recording \
+  rec1_mic1.wav 1.0,1.0,0.0 rec1_mic2.wav 1.5,1.0,0.0 rec1_mic3.wav 1.25,1.43,0.0 \
+  rec2_mic1.wav 1.0,1.0,0.8 rec2_mic2.wav 1.5,1.0,0.8 rec2_mic3.wav 1.25,1.43,0.8
+```
+
+**Format:** Each recording needs 6 arguments:  
+`file1 x1,y1,z1 file2 x2,y2,z2 file3 x3,y3,z3`
+
+### Interpreting Multi-Recording Results
+
+The program will show:
+```
+Individual estimates:
+  Recording 1: (2.3, 1.8, 1.2) m, weight: 0.55
+  Recording 2: (2.4, 1.7, 1.3) m, weight: 0.45
+
+Final estimate (weighted average):
+  Position: (2.35, 1.75, 1.25) meters
+  Consistency (std dev): 0.07 m
+```
+
+**Good result:** Consistency < 0.2m  
+**Poor result:** Consistency > 0.5m (source may have moved, or bad positions)
+
+### Tips for Best Results
+
+1. **Use equilateral triangle spacing** (all sides equal, ~30-50cm)
+2. **Vary height between recordings** (at least 50cm difference)
+3. **Ensure source stays constant** (check sound level on phone before each recording)
+4. **Measure positions carefully** (accuracy of results depends on position accuracy)
+5. **Keep same mic order** (mic1 is always the same device across recordings)
+
+See `MULTI_RECORDING_GUIDE.md` for comprehensive details.
 
 ### Common Positioning Mistakes
 

@@ -3,8 +3,8 @@
 #include <cmath>
 #include <iostream>
 #include <random>
-#include "nl.h"
-#include "sig.h"
+#include <sensor_fusion/nl.h>
+#include <sensor_fusion/sig.h>
 
 /**
  * Test suite for broadband/multi-frequency droning sounds

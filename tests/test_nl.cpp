@@ -1,6 +1,5 @@
 #include <gtest/gtest.h>
-#include "nl.h"
-#include "ndist.h"
+#include <sensor_fusion/nl.h>
 #include <iostream>
 #include <Eigen/Dense>
 #include <cmath>
